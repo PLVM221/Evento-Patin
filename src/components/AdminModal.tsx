@@ -8,7 +8,7 @@ type Tab = 'evento' | 'participantes' | 'clubes' | 'audios'
 interface Props {
   state: FestivalState
   onClose: () => void
-  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'stage'>) => void
+  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'stageCount'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
   onRenameClub: (from: string, to: string) => void
@@ -40,13 +40,13 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
 }
 
 function EventForm({ state, onSave }: { state: FestivalState; onSave: Props['onUpdateEvent'] }) {
-  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, stage: state.stage })
+  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, stageCount: state.stageCount })
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(values) }
   return <form className="admin-form" onSubmit={submit}>
     <div className="admin-intro"><h3>Datos del evento</h3><p>Estos datos aparecen en el panel del operador.</p></div>
     <label>Nombre del evento<input required value={values.name} onChange={event => setValues({ ...values, name: event.target.value })} /></label>
     <label>Club organizador<input required value={values.organizer} onChange={event => setValues({ ...values, organizer: event.target.value })} /></label>
-    <label>Etapa<select value={values.stage} onChange={event => setValues({ ...values, stage: event.target.value as FestivalState['stage'] })}><option>Primera etapa</option><option>Segunda etapa</option></select></label>
+    <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial de cada patinadora.</small></label>
     <button className="primary-save">Guardar cambios</button>
   </form>
 }

@@ -9,7 +9,7 @@ import { useFestival } from './hooks/useFestival'
 import { formatTime, fullName, type Skater } from './models'
 
 function App() {
-  const { state, start, finishAndNext, move, setStatus, setVolume, reset, beginSecondStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, setStatus, setVolume, reset, completeStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -23,6 +23,9 @@ function App() {
   const finished = state.skaters.filter(skater => skater.status === 'FINISHED').length
   const visible = useMemo(() => state.skaters.filter(skater => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [state.skaters, query])
   const suggestions = query.trim().length ? visible.slice(0, 6) : []
+  const stageName = `Etapa ${state.currentStage} de ${state.stageCount}`
+  const hasNextStage = state.currentStage < state.stageCount
+  const currentStageCompleted = state.completedStages.includes(state.currentStage)
 
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
@@ -72,7 +75,7 @@ function App() {
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
       <header>
         <div className="brand"><div className="brand-mark"><Sparkles /></div><div><strong>PISTA</strong><span>Gestión de eventos</span></div></div>
-        <div className="event-name"><span>EVENTO ACTUAL · {state.stage.toUpperCase()}</span><strong>{state.name}</strong><small>Organiza: {state.organizer}</small></div>
+        <div className="event-name"><span>EVENTO ACTUAL · {stageName.toUpperCase()}</span><strong>{state.name}</strong><small>Organiza: {state.organizer}</small></div>
         <div className="header-actions">
           <div className="live-state"><i /> {state.started ? 'EN VIVO' : 'PREPARACIÓN'}</div>
           <button title="Pantalla completa" aria-label="Pantalla completa" onClick={() => void document.documentElement.requestFullscreen()}><Maximize2 /></button>
@@ -87,7 +90,7 @@ function App() {
           <div><Users /><span><small>PARTICIPANTES</small><strong>{state.skaters.length}</strong></span></div>
           <div><Check /><span><small>FINALIZADAS</small><strong>{finished}</strong></span></div>
           <div><Clock3 /><span><small>RESTANTES</small><strong>{state.skaters.length - finished}</strong></span></div>
-          <div className="stage-stat"><span><small>ETAPA</small><strong>{state.stage}</strong></span></div>
+          <div className="stage-stat"><span><small>ETAPA ACTUAL</small><strong>{state.currentStage} / {state.stageCount}</strong></span></div>
           <div className="estimate"><span><small>FINAL ESTIMADO</small><strong>18:42</strong></span><em>En horario</em></div>
           <div className="search-wrap">
             <label className="search"><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre, club o número..." /></label>
@@ -96,9 +99,9 @@ function App() {
           </div>
         </section>
 
-        {!state.started && <button className="start-banner" onClick={() => window.confirm('¿Iniciar festival desde la participante preparada?') && start()}><span><PlayIcon /> INICIAR FESTIVAL</span><small>La música quedará preparada. No comenzará automáticamente.</small></button>}
-        {state.stage === 'Primera etapa' && <button className="stage-transition" onClick={() => window.confirm('¿Cerrar la primera etapa e iniciar la preparación de la segunda? Se conservarán los resultados de cada patinadora.') && beginSecondStage()}><RefreshCcw /><span><strong>INICIAR SEGUNDA ETAPA</strong><small>Cierra y registra resultados de la primera etapa</small></span></button>}
-        {state.firstStageCompleted && <div className="stage-complete"><Check /> Primera etapa finalizada · resultados guardados en el listado</div>}
+        {!state.started && !currentStageCompleted && <button className="start-banner" onClick={() => window.confirm(`¿Iniciar etapa ${state.currentStage} desde la participante preparada?`) && start()}><span><PlayIcon /> INICIAR ETAPA {state.currentStage}</span><small>La música quedará preparada. No comenzará automáticamente.</small></button>}
+        {!currentStageCompleted && <button className="stage-transition" onClick={() => window.confirm(`¿Finalizar etapa ${state.currentStage}${hasNextStage ? ` e iniciar etapa ${state.currentStage + 1}` : ' y cerrar todas las pasadas'}? Se guardará el resultado de cada patinadora.`) && completeStage()}><RefreshCcw /><span><strong>{hasNextStage ? `FINALIZAR ETAPA ${state.currentStage} E INICIAR ETAPA ${state.currentStage + 1}` : `FINALIZAR ETAPA ${state.currentStage}`}</strong><small>Guarda resultados de esta pasada {hasNextStage ? 'y prepara la siguiente' : 'y cierra el festival'}</small></span></button>}
+        {state.completedStages.length > 0 && <div className="stage-complete"><Check /> {state.completedStages.map(stage => `Etapa ${stage} finalizada`).join(' · ')} · resultados guardados en el listado</div>}
 
         <div className="live-grid">
           <section className="now-card card">

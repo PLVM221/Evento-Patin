@@ -21,7 +21,7 @@ export function Queue({ skaters, activeId, onMove, onSelect, onStatus }: QueuePr
         {skaters.map((skater, index) => (
           <div key={skater.id} className={`queue-row ${skater.id === activeId ? 'active' : ''} ${skater.status === 'FINISHED' ? 'finished' : ''} ${skater.status === 'ABSENT' ? 'absent' : ''}`}>
             <span className="number">{skater.number}</span>
-            <button className="person" onClick={() => onSelect(skater)}><strong>{fullName(skater)}</strong><small>{skater.track}</small>{skater.firstStageStatus && <small className={`first-stage-result ${skater.firstStageStatus.toLowerCase()}`}>1ª etapa: {statusLabel[skater.firstStageStatus]}</small>}</button>
+            <button className="person" onClick={() => onSelect(skater)}><strong>{fullName(skater)}</strong><small>{skater.track}</small>{Object.entries(skater.stageResults ?? {}).map(([stage, result]) => <small key={stage} className={`first-stage-result ${result.toLowerCase()}`}>Etapa {stage}: {statusLabel[result]}</small>)}</button>
             <span>{skater.club}</span>
             <span>{skater.heat}</span>
             <span><i className={`status-dot ${skater.status.toLowerCase()}`} />{statusLabel[skater.status]}</span>

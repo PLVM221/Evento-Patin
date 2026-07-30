@@ -24,3 +24,4 @@
 | 16:25 | feat(search): sugerencias instantáneas por nombre, club y número |
 | 16:25 | feat(stage): cierre de primera etapa, inicio de segunda y resultado por patinadora |
 | 16:34 | feat(soundboard): personalización real con carga, nombre, reproducción y eliminación |
+| 16:47 | feat(stage): configuración de 1/2/3 etapas, cierre por pasada e historial completo |

@@ -1,4 +1,5 @@
 export type SkaterStatus = 'PENDING' | 'READY' | 'SKATING' | 'FINISHED' | 'ABSENT' | 'POSTPONED'
+export type StageNumber = 1 | 2 | 3
 
 export interface Skater {
   id: string
@@ -11,7 +12,7 @@ export interface Skater {
   duration: number
   heat: string
   status: SkaterStatus
-  firstStageStatus?: SkaterStatus
+  stageResults?: Partial<Record<StageNumber, SkaterStatus>>
   notes?: string
   audioUrl?: string
   audioName?: string
@@ -20,8 +21,9 @@ export interface Skater {
 export interface FestivalState {
   name: string
   organizer: string
-  stage: 'Primera etapa' | 'Segunda etapa'
-  firstStageCompleted: boolean
+  stageCount: StageNumber
+  currentStage: StageNumber
+  completedStages: StageNumber[]
   started: boolean
   skaters: Skater[]
   activeId?: string

@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { initialFestival } from '../data/demo'
-import type { FestivalState, SkaterStatus } from '../models'
+import type { FestivalState, SkaterStatus, StageNumber } from '../models'
 
 const STORAGE_KEY = 'pista-festival-state-v1'
 
 const restore = (): FestivalState => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? { ...initialFestival, ...JSON.parse(saved) } : initialFestival
+    if (!saved) return initialFestival
+    const parsed = JSON.parse(saved)
+    return {
+      ...initialFestival,
+      ...parsed,
+      stageCount: parsed.stageCount ?? 2,
+      currentStage: parsed.currentStage ?? (parsed.stage === 'Segunda etapa' ? 2 : 1),
+      completedStages: parsed.completedStages ?? (parsed.firstStageCompleted ? [1] : []),
+      skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
+        ...skater,
+        stageResults: skater.stageResults ?? (skater.firstStageStatus ? { 1: skater.firstStageStatus } : {}),
+      })),
+    }
   } catch {
     return initialFestival
   }
@@ -68,34 +80,36 @@ export function useFestival() {
 
   const reset = () => update(current => ({
     ...current,
-    stage: 'Primera etapa',
-    firstStageCompleted: false,
+    currentStage: 1,
+    completedStages: [],
     started: false,
     activeId: current.skaters[0]?.id,
     elapsed: 0,
-    skaters: current.skaters.map((skater, index) => ({ ...skater, firstStageStatus: undefined, status: index === 0 ? 'READY' : 'PENDING' })),
+    skaters: current.skaters.map((skater, index) => ({ ...skater, stageResults: {}, status: index === 0 ? 'READY' : 'PENDING' })),
   }))
 
-  const beginSecondStage = () => update(current => {
+  const completeStage = () => update(current => {
+    const finishingStage = current.currentStage
+    const hasNext = finishingStage < current.stageCount
     const eligible = current.skaters.filter(skater => skater.status !== 'ABSENT')
     const first = eligible[0]
     return {
       ...current,
-      stage: 'Segunda etapa',
-      firstStageCompleted: true,
+      currentStage: (hasNext ? finishingStage + 1 : finishingStage) as StageNumber,
+      completedStages: [...new Set([...current.completedStages, finishingStage])] as StageNumber[],
       started: false,
       elapsed: 0,
-      activeId: first?.id,
+      activeId: hasNext ? first?.id : undefined,
       skaters: current.skaters.map(skater => ({
         ...skater,
-        firstStageStatus: skater.status,
-        status: skater.id === first?.id ? 'READY' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING',
+        stageResults: { ...skater.stageResults, [finishingStage]: skater.status },
+        status: hasNext ? (skater.id === first?.id ? 'READY' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING') : skater.status,
       })),
     }
   })
 
-  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'stage'>) =>
-    update(current => ({ ...current, ...values }))
+  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'stageCount'>) =>
+    update(current => ({ ...current, ...values, currentStage: Math.min(current.currentStage, values.stageCount) as StageNumber, completedStages: current.completedStages.filter(stage => stage <= values.stageCount) }))
 
   const addSkater = (skater: Omit<FestivalState['skaters'][number], 'id' | 'status'>) =>
     update(current => ({ ...current, skaters: [...current.skaters, { ...skater, id: crypto.randomUUID(), status: 'PENDING' }] }))
@@ -111,5 +125,5 @@ export function useFestival() {
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, setStatus, setVolume, reset, beginSecondStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
+  return { state, start, finishAndNext, move, setStatus, setVolume, reset, completeStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
 }

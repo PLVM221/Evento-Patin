@@ -80,6 +80,14 @@
   text-align: center;
 }
 
+.field-help {
+  display: block;
+  margin-top: 6px;
+  color: #929bad;
+  font-size: 9px;
+  font-weight: 400;
+}
+
 .stage-transition {
   width: 100%;
   margin-bottom: 14px;
