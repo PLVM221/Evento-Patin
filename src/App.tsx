@@ -1,6 +1,7 @@
+ 'use client'
+
 import { useMemo, useState } from 'react'
 import { Bell, Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
-import './App.css'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
 import { useFestival } from './hooks/useFestival'

@@ -11,3 +11,4 @@
 | 14:32 | test: `npm run build` y `npm run lint` OK |
 | 15:09 | deploy: configuración de OpenAI Sites agregada |
 | 15:12 | fix(deploy): permitir instalación limpia del builder sin lockfile incompatible |
+| 15:15 | build(hosting): migración de entrada Vite SPA a vinext App Router |
