@@ -24,6 +24,7 @@ export interface FestivalState {
   stageCount: StageNumber
   currentStage: StageNumber
   completedStages: StageNumber[]
+  stageOrders: Partial<Record<StageNumber, string[]>>
   started: boolean
   skaters: Skater[]
   activeId?: string

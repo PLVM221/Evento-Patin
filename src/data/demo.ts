@@ -6,6 +6,7 @@ export const initialFestival: FestivalState = {
   stageCount: 2,
   currentStage: 1,
   completedStages: [],
+  stageOrders: {},
   started: false,
   activeId: '3',
   elapsed: 137,

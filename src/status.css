@@ -88,6 +88,19 @@
   font-weight: 400;
 }
 
+.download-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #f0efff;
+}
+
+.download-list svg {
+  width: 13px;
+}
+
 .stage-transition {
   width: 100%;
   margin-bottom: 14px;

@@ -15,6 +15,7 @@ const restore = (): FestivalState => {
       stageCount: parsed.stageCount ?? 2,
       currentStage: parsed.currentStage ?? (parsed.stage === 'Segunda etapa' ? 2 : 1),
       completedStages: parsed.completedStages ?? (parsed.firstStageCompleted ? [1] : []),
+      stageOrders: parsed.stageOrders ?? {},
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageResults: skater.stageResults ?? (skater.firstStageStatus ? { 1: skater.firstStageStatus } : {}),
@@ -82,6 +83,7 @@ export function useFestival() {
     ...current,
     currentStage: 1,
     completedStages: [],
+    stageOrders: {},
     started: false,
     activeId: current.skaters[0]?.id,
     elapsed: 0,
@@ -97,6 +99,7 @@ export function useFestival() {
       ...current,
       currentStage: (hasNext ? finishingStage + 1 : finishingStage) as StageNumber,
       completedStages: [...new Set([...current.completedStages, finishingStage])] as StageNumber[],
+      stageOrders: { ...current.stageOrders, [finishingStage]: current.skaters.map(skater => skater.id) },
       started: false,
       elapsed: 0,
       activeId: hasNext ? first?.id : undefined,

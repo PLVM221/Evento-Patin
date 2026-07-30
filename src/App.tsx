@@ -71,6 +71,31 @@ function App() {
     void player.play()
   }
 
+  const downloadEventList = () => {
+    const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
+    const rows: Array<Array<string | number>> = [
+      ['Evento', state.name],
+      ['Club organizador', state.organizer],
+      ['Cantidad de etapas', state.stageCount],
+      [],
+      ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Canción / Nombre del baile'],
+    ]
+    for (let stage = 1; stage <= state.stageCount; stage += 1) {
+      const savedOrder = state.stageOrders[stage as 1 | 2 | 3]
+      const ordered = savedOrder
+        ? savedOrder.map(id => state.skaters.find(skater => skater.id === id)).filter((skater): skater is Skater => Boolean(skater))
+        : state.skaters
+      ordered.forEach((skater, index) => rows.push([`Etapa ${stage}`, index + 1, skater.number, fullName(skater), skater.club, skater.track]))
+    }
+    const csv = `\uFEFF${rows.map(row => row.map(quote).join(';')).join('\r\n')}`
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${state.name.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-orden-de-pasada.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
       <header>
@@ -141,7 +166,7 @@ function App() {
           </div>
         </section>
 
-        <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} />
+        <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />
       </main>
       <audio ref={effectPlayer} preload="auto" />
 
