@@ -15,6 +15,8 @@ function App() {
   const [adminOpen, setAdminOpen] = useState(false)
   const [dark, setDark] = useState(false)
   const effectPlayer = useRef<HTMLAudioElement>(null)
+  const customSoundInput = useRef<HTMLInputElement>(null)
+  const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
   const active = state.skaters.find(skater => skater.id === state.activeId)
   const waiting = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
@@ -47,6 +49,24 @@ function App() {
     window.addEventListener('keydown', handleShortcut)
     return () => window.removeEventListener('keydown', handleShortcut)
   }, [playEffect])
+
+  const addCustomSound = (file?: File) => {
+    if (!file) return
+    const suggested = file.name.replace(/\.[^.]+$/, '')
+    const name = window.prompt('Nombre del botón de audio:', suggested)?.trim()
+    if (!name) return
+    setCustomSounds(current => [...current, { id: crypto.randomUUID(), name, url: URL.createObjectURL(file) }])
+  }
+
+  const playCustomSound = (url: string) => {
+    const player = effectPlayer.current
+    if (!player) return
+    player.pause()
+    player.src = url
+    player.currentTime = 0
+    player.volume = state.effectsVolume / 100
+    void player.play()
+  }
 
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
@@ -112,7 +132,9 @@ function App() {
             <button onClick={() => playEffect('locutor/presentacion.wav')}><Mic2 /><strong>PRESENTACIÓN</strong><kbd>F3</kbd></button>
             <button onClick={() => playEffect('locutor/proxima.wav')}><Bell /><strong>PRÓXIMA</strong><kbd>F4</kbd></button>
             <button onClick={() => playEffect('locutor/felicitaciones.wav')}><span>🎉</span><strong>FELICITACIONES</strong><kbd>F6</kbd></button>
-            <button className="add-sound">＋ Personalizar</button>
+            {customSounds.map(sound => <button className="custom-sound" key={sound.id} onClick={() => playCustomSound(sound.url)}><Volume2 /><strong>{sound.name}</strong><span className="remove-sound" title="Eliminar" onClick={event => { event.stopPropagation(); URL.revokeObjectURL(sound.url); setCustomSounds(current => current.filter(item => item.id !== sound.id)) }}>×</span></button>)}
+            <button className="add-sound" onClick={() => customSoundInput.current?.click()}>＋ Personalizar</button>
+            <input ref={customSoundInput} className="hidden-file" type="file" accept="audio/*" onChange={event => { addCustomSound(event.target.files?.[0]); event.target.value = '' }} />
           </div>
         </section>
 

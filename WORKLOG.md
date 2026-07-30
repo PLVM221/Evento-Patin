@@ -23,3 +23,4 @@
 | 16:12 | style(queue): ausentes tachadas, atenuadas y diferenciadas en rojo |
 | 16:25 | feat(search): sugerencias instantáneas por nombre, club y número |
 | 16:25 | feat(stage): cierre de primera etapa, inicio de segunda y resultado por patinadora |
+| 16:34 | feat(soundboard): personalización real con carga, nombre, reproducción y eliminación |

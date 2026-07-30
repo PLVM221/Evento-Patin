@@ -147,3 +147,31 @@
     margin: 0;
   }
 }
+
+.hidden-file {
+  display: none;
+}
+
+.sound-buttons .custom-sound {
+  position: relative;
+  color: #5d53c7;
+  background: #f3f1ff;
+  border-color: #ddd9ff;
+}
+
+.remove-sound {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: #9a91cf;
+  font-size: 13px;
+  line-height: 15px;
+}
+
+.remove-sound:hover {
+  color: white;
+  background: #e35e68;
+}
