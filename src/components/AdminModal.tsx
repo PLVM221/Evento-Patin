@@ -62,11 +62,11 @@ function SkaterAdmin({ state, onAdd, onUpdate }: { state: FestivalState; onAdd: 
       <input placeholder="Nombre" required value={form.firstName} onChange={event => setForm({ ...form, firstName: event.target.value })} />
       <input placeholder="Apellido" required value={form.lastName} onChange={event => setForm({ ...form, lastName: event.target.value })} />
       <input placeholder="Club" required value={form.club} onChange={event => setForm({ ...form, club: event.target.value })} />
-      <input placeholder="Tema musical" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
+      <input placeholder="Coreografía / canción" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
       <select value={form.heat} onChange={event => setForm({ ...form, heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select>
       <button><Plus /> Agregar</button>
     </form>
-    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><small>{skater.club}</small></div><input aria-label="Tema" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select value={skater.heat} onChange={event => onUpdate(skater.id, { heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select></div>)}</div>
+    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><small>{skater.club}</small></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select value={skater.heat} onChange={event => onUpdate(skater.id, { heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select></div>)}</div>
   </div>
 }
 

@@ -78,7 +78,7 @@ function App() {
       ['Club organizador', state.organizer],
       ['Cantidad de etapas', state.stageCount],
       [],
-      ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Canción / Nombre del baile'],
+      ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía / Canción'],
     ]
     for (let stage = 1; stage <= state.stageCount; stage += 1) {
       const savedOrder = state.stageOrders[stage as 1 | 2 | 3]
@@ -135,7 +135,7 @@ function App() {
               <div className="bib">Nº {active.number}</div>
               <h1>{active.firstName}<br /><strong>{active.lastName}</strong></h1>
               <p className="club">{active.club}</p>
-              <div className="track"><span>♫</span><div><small>TEMA MUSICAL</small><strong>{active.track}</strong><em>{active.category}</em></div></div>
+              <div className="track"><span>♫</span><div><small>COREOGRAFÍA / CANCIÓN</small><strong>{active.track}</strong><em>{active.category}</em></div></div>
               <Player skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={value => setVolume('musicVolume', value)} />
               <div className="critical-actions">
                 <button className="finish" onClick={finalize}><Check /> FINALIZAR</button>
