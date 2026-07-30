@@ -14,3 +14,4 @@
 | 15:15 | build(hosting): migración de entrada Vite SPA a vinext App Router |
 | 15:18 | deploy: artefacto vinext validado para publicación en Sites |
 | 15:24 | ci(pages): build estático y workflow de publicación en GitHub Pages |
+| 15:27 | fix(ci): compatibilidad npm 11 y habilitación automática de Pages |
