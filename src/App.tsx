@@ -1,6 +1,6 @@
  'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
@@ -11,6 +11,7 @@ function App() {
   const { state, start, finishAndNext, move, setStatus, setVolume, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
+  const effectPlayer = useRef<HTMLAudioElement>(null)
   const active = state.skaters.find(skater => skater.id === state.activeId)
   const waiting = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
@@ -20,6 +21,26 @@ function App() {
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
   }
+
+  const playEffect = useCallback((file: string, gain = 1) => {
+    const player = effectPlayer.current
+    if (!player) return
+    player.pause()
+    player.src = `${import.meta.env.BASE_URL}audio/${file}`
+    player.currentTime = 0
+    player.volume = Math.min(1, (state.effectsVolume / 100) * gain)
+    void player.play()
+  }, [state.effectsVolume])
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (event.key === 'F1') { event.preventDefault(); playEffect('aplausos.ogg', .7) }
+      if (event.key === 'F2') { event.preventDefault(); playEffect('aplausos.ogg') }
+      if (event.key === 'F4') { event.preventDefault(); playEffect('campana.ogg', .85) }
+    }
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [playEffect])
 
   return (
     <div className="app-shell">
@@ -70,10 +91,10 @@ function App() {
         <section className="soundboard">
           <div className="sound-title"><span><Mic2 /> PANEL DEL LOCUTOR</span><label><Volume2 /><input type="range" min="0" max="100" value={state.effectsVolume} onChange={event => setVolume('effectsVolume', Number(event.target.value))} /><b>{state.effectsVolume}%</b></label></div>
           <div className="sound-buttons">
-            <button><span>👏</span><strong>APLAUSOS</strong><kbd>F1</kbd></button>
-            <button><span>👏👏</span><strong>APLAUSOS FUERTES</strong><kbd>F2</kbd></button>
+            <button onClick={() => playEffect('aplausos.ogg', .7)}><span>👏</span><strong>APLAUSOS</strong><kbd>F1</kbd></button>
+            <button onClick={() => playEffect('aplausos.ogg')}><span>👏👏</span><strong>APLAUSOS FUERTES</strong><kbd>F2</kbd></button>
             <button><Mic2 /><strong>PRESENTACIÓN</strong><kbd>F3</kbd></button>
-            <button><Bell /><strong>PRÓXIMA</strong><kbd>F4</kbd></button>
+            <button onClick={() => playEffect('campana.ogg', .85)}><Bell /><strong>CAMPANA</strong><kbd>F4</kbd></button>
             <button><span>🎉</span><strong>FELICITACIONES</strong><kbd>F6</kbd></button>
             <button className="add-sound">＋ Personalizar</button>
           </div>
@@ -81,6 +102,7 @@ function App() {
 
         <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} />
       </main>
+      <audio ref={effectPlayer} preload="auto" />
 
       <footer><span><i /> Guardado automático</span><span>Último guardado: ahora</span><button onClick={undo} disabled={!canUndo}><Undo2 /> DESHACER ÚLTIMA ACCIÓN</button><span className="footer-time">JUE 30 JUL · 14:32</span></footer>
 

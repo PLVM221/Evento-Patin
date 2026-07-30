@@ -15,3 +15,4 @@
 | 15:18 | deploy: artefacto vinext validado para publicación en Sites |
 | 15:24 | ci(pages): build estático y workflow de publicación en GitHub Pages |
 | 15:27 | fix(ci): compatibilidad npm 11 y habilitación automática de Pages |
+| 15:35 | feat(audio): efectos CC0/dominio público, reproducción local y atajos F1/F2/F4 |
