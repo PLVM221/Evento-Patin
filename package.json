@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:pages": "tsc -b && vite build --config vite.github.config.ts",
     "postbuild": "node scripts/copy-hosting.mjs",
     "lint": "oxlint",
     "start": "vinext start"
