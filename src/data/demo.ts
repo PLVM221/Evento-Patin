@@ -2,6 +2,8 @@ import type { FestivalState } from '../models'
 
 export const initialFestival: FestivalState = {
   name: 'Festival Provincial 2026',
+  organizer: 'Club Atlético Provincial',
+  stage: 'Primera etapa',
   started: false,
   activeId: '3',
   elapsed: 137,

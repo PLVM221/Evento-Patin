@@ -7,7 +7,7 @@ const STORAGE_KEY = 'pista-festival-state-v1'
 const restore = (): FestivalState => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : initialFestival
+    return saved ? { ...initialFestival, ...JSON.parse(saved) } : initialFestival
   } catch {
     return initialFestival
   }
@@ -66,10 +66,30 @@ export function useFestival() {
   const setVolume = (key: 'musicVolume' | 'effectsVolume', value: number) =>
     update(current => ({ ...current, [key]: value }))
 
+  const reset = () => update(current => ({
+    ...current,
+    started: false,
+    activeId: current.skaters[0]?.id,
+    elapsed: 0,
+    skaters: current.skaters.map((skater, index) => ({ ...skater, status: index === 0 ? 'READY' : 'PENDING' })),
+  }))
+
+  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'stage'>) =>
+    update(current => ({ ...current, ...values }))
+
+  const addSkater = (skater: Omit<FestivalState['skaters'][number], 'id' | 'status'>) =>
+    update(current => ({ ...current, skaters: [...current.skaters, { ...skater, id: crypto.randomUUID(), status: 'PENDING' }] }))
+
+  const updateSkater = (id: string, values: Partial<FestivalState['skaters'][number]>) =>
+    update(current => ({ ...current, skaters: current.skaters.map(skater => skater.id === id ? { ...skater, ...values } : skater) }))
+
+  const renameClub = (from: string, to: string) =>
+    update(current => ({ ...current, skaters: current.skaters.map(skater => skater.club === from ? { ...skater, club: to } : skater) }))
+
   const undo = () => {
     const previous = history.current.pop()
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, setStatus, setVolume, undo, canUndo: history.current.length > 0 }
+  return { state, start, finishAndNext, move, setStatus, setVolume, reset, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
 }

@@ -13,10 +13,13 @@ export interface Skater {
   status: SkaterStatus
   notes?: string
   audioUrl?: string
+  audioName?: string
 }
 
 export interface FestivalState {
   name: string
+  organizer: string
+  stage: 'Primera etapa' | 'Segunda etapa'
   started: boolean
   skaters: Skater[]
   activeId?: string

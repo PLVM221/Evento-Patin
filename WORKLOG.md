@@ -17,3 +17,6 @@
 | 15:27 | fix(ci): compatibilidad npm 11 y habilitación automática de Pages |
 | 15:35 | feat(audio): efectos CC0/dominio público, reproducción local y atajos F1/F2/F4 |
 | 15:43 | feat(locutor): locuciones offline WAV para presentación, próxima y felicitaciones |
+| 16:05 | feat(admin): reinicio, botones funcionales, administración de evento, etapa, club organizador, participantes, clubes y audios |
+| 16:05 | feat(queue): mover, marcar ausente y reactivar desde listado |
+| 16:05 | test: builds Sites/Pages y lint OK |

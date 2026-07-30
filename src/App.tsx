@@ -1,16 +1,19 @@
  'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
+import { Bell, Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, RefreshCcw, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
+import { AdminModal } from './components/AdminModal'
 import { useFestival } from './hooks/useFestival'
 import { formatTime, fullName, type Skater } from './models'
 
 function App() {
-  const { state, start, finishAndNext, move, setStatus, setVolume, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, setStatus, setVolume, reset, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
+  const [adminOpen, setAdminOpen] = useState(false)
+  const [dark, setDark] = useState(false)
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const active = state.skaters.find(skater => skater.id === state.activeId)
   const waiting = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
@@ -45,13 +48,16 @@ function App() {
   }, [playEffect])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${dark ? 'dark' : ''}`}>
       <header>
         <div className="brand"><div className="brand-mark"><Sparkles /></div><div><strong>PISTA</strong><span>Gestión de eventos</span></div></div>
-        <div className="event-name"><span>EVENTO ACTUAL</span><strong>{state.name}</strong></div>
+        <div className="event-name"><span>EVENTO ACTUAL · {state.stage.toUpperCase()}</span><strong>{state.name}</strong><small>Organiza: {state.organizer}</small></div>
         <div className="header-actions">
           <div className="live-state"><i /> {state.started ? 'EN VIVO' : 'PREPARACIÓN'}</div>
-          <button title="Pantalla pública"><Maximize2 /></button><button title="Tema"><Moon /></button><button title="Configuración"><Settings /></button>
+          <button title="Pantalla completa" aria-label="Pantalla completa" onClick={() => void document.documentElement.requestFullscreen()}><Maximize2 /></button>
+          <button title="Cambiar tema claro/oscuro" aria-label="Cambiar tema" onClick={() => setDark(value => !value)}><Moon /></button>
+          <button title="Administrar evento, patinadoras, clubes y audios" aria-label="Administrar" onClick={() => setAdminOpen(true)}><Settings /></button>
+          <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}><RefreshCcw /><span>REINICIAR</span></button>
         </div>
       </header>
 
@@ -60,6 +66,7 @@ function App() {
           <div><Users /><span><small>PARTICIPANTES</small><strong>{state.skaters.length}</strong></span></div>
           <div><Check /><span><small>FINALIZADAS</small><strong>{finished}</strong></span></div>
           <div><Clock3 /><span><small>RESTANTES</small><strong>{state.skaters.length - finished}</strong></span></div>
+          <div className="stage-stat"><span><small>ETAPA</small><strong>{state.stage}</strong></span></div>
           <div className="estimate"><span><small>FINAL ESTIMADO</small><strong>18:42</strong></span><em>En horario</em></div>
           <label className="search"><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar participante..." /></label>
         </section>
@@ -102,13 +109,14 @@ function App() {
           </div>
         </section>
 
-        <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} />
+        <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} />
       </main>
       <audio ref={effectPlayer} preload="auto" />
 
       <footer><span><i /> Guardado automático</span><span>Último guardado: ahora</span><button onClick={undo} disabled={!canUndo}><Undo2 /> DESHACER ÚLTIMA ACCIÓN</button><span className="footer-time">JUE 30 JUL · 14:32</span></footer>
 
-      {selected && <div className="modal-backdrop" onMouseDown={() => setSelected(undefined)}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setSelected(undefined)}>×</button><small>PARTICIPANTE Nº {selected.number}</small><h2>{fullName(selected)}</h2><p>{selected.club} · {selected.category}</p><div className="modal-track">♫ {selected.track} · {formatTime(selected.duration)}</div><div className="modal-actions"><button onClick={() => { setStatus(selected.id, 'ABSENT'); setSelected(undefined) }}>Marcar ausente</button><button onClick={() => { setStatus(selected.id, 'POSTPONED'); setSelected(undefined) }}>Posponer</button></div></div></div>}
+      {selected && <div className="modal-backdrop" onMouseDown={() => setSelected(undefined)}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setSelected(undefined)}>×</button><small>PARTICIPANTE Nº {selected.number}</small><h2>{fullName(selected)}</h2><p>{selected.club} · {selected.category}</p><div className="modal-track">♫ {selected.track} · {formatTime(selected.duration)}</div><div className="modal-actions">{selected.status === 'ABSENT' ? <button onClick={() => { setStatus(selected.id, 'PENDING'); setSelected(undefined) }}>Reactivar</button> : <button onClick={() => { setStatus(selected.id, 'ABSENT'); setSelected(undefined) }}>No se presenta</button>}<button onClick={() => { setStatus(selected.id, 'POSTPONED'); setSelected(undefined) }}>Posponer</button></div></div></div>}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} />}
     </div>
   )
 }
