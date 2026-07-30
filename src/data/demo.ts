@@ -4,6 +4,7 @@ export const initialFestival: FestivalState = {
   name: 'Festival Provincial 2026',
   organizer: 'Club Atlético Provincial',
   stage: 'Primera etapa',
+  firstStageCompleted: false,
   started: false,
   activeId: '3',
   elapsed: 137,

@@ -9,7 +9,7 @@ import { useFestival } from './hooks/useFestival'
 import { formatTime, fullName, type Skater } from './models'
 
 function App() {
-  const { state, start, finishAndNext, move, setStatus, setVolume, reset, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, setStatus, setVolume, reset, beginSecondStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -20,6 +20,7 @@ function App() {
   const next = waiting[0]
   const finished = state.skaters.filter(skater => skater.status === 'FINISHED').length
   const visible = useMemo(() => state.skaters.filter(skater => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [state.skaters, query])
+  const suggestions = query.trim().length ? visible.slice(0, 6) : []
 
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
@@ -68,10 +69,16 @@ function App() {
           <div><Clock3 /><span><small>RESTANTES</small><strong>{state.skaters.length - finished}</strong></span></div>
           <div className="stage-stat"><span><small>ETAPA</small><strong>{state.stage}</strong></span></div>
           <div className="estimate"><span><small>FINAL ESTIMADO</small><strong>18:42</strong></span><em>En horario</em></div>
-          <label className="search"><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar participante..." /></label>
+          <div className="search-wrap">
+            <label className="search"><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre, club o número..." /></label>
+            {suggestions.length > 0 && <div className="search-results">{suggestions.map(skater => <button key={skater.id} onClick={() => { setSelected(skater); setQuery('') }}><span><strong>{fullName(skater)}</strong><small>{skater.club} · Nº {skater.number}</small></span><em>{skater.status === 'ABSENT' ? 'Ausente' : skater.heat}</em></button>)}</div>}
+            {query.trim() && suggestions.length === 0 && <div className="search-results empty-search">Sin coincidencias</div>}
+          </div>
         </section>
 
         {!state.started && <button className="start-banner" onClick={() => window.confirm('¿Iniciar festival desde la participante preparada?') && start()}><span><PlayIcon /> INICIAR FESTIVAL</span><small>La música quedará preparada. No comenzará automáticamente.</small></button>}
+        {state.stage === 'Primera etapa' && <button className="stage-transition" onClick={() => window.confirm('¿Cerrar la primera etapa e iniciar la preparación de la segunda? Se conservarán los resultados de cada patinadora.') && beginSecondStage()}><RefreshCcw /><span><strong>INICIAR SEGUNDA ETAPA</strong><small>Cierra y registra resultados de la primera etapa</small></span></button>}
+        {state.firstStageCompleted && <div className="stage-complete"><Check /> Primera etapa finalizada · resultados guardados en el listado</div>}
 
         <div className="live-grid">
           <section className="now-card card">

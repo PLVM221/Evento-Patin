@@ -11,6 +11,7 @@ export interface Skater {
   duration: number
   heat: string
   status: SkaterStatus
+  firstStageStatus?: SkaterStatus
   notes?: string
   audioUrl?: string
   audioName?: string
@@ -20,6 +21,7 @@ export interface FestivalState {
   name: string
   organizer: string
   stage: 'Primera etapa' | 'Segunda etapa'
+  firstStageCompleted: boolean
   started: boolean
   skaters: Skater[]
   activeId?: string

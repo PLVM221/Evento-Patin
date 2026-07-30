@@ -68,11 +68,31 @@ export function useFestival() {
 
   const reset = () => update(current => ({
     ...current,
+    stage: 'Primera etapa',
+    firstStageCompleted: false,
     started: false,
     activeId: current.skaters[0]?.id,
     elapsed: 0,
-    skaters: current.skaters.map((skater, index) => ({ ...skater, status: index === 0 ? 'READY' : 'PENDING' })),
+    skaters: current.skaters.map((skater, index) => ({ ...skater, firstStageStatus: undefined, status: index === 0 ? 'READY' : 'PENDING' })),
   }))
+
+  const beginSecondStage = () => update(current => {
+    const eligible = current.skaters.filter(skater => skater.status !== 'ABSENT')
+    const first = eligible[0]
+    return {
+      ...current,
+      stage: 'Segunda etapa',
+      firstStageCompleted: true,
+      started: false,
+      elapsed: 0,
+      activeId: first?.id,
+      skaters: current.skaters.map(skater => ({
+        ...skater,
+        firstStageStatus: skater.status,
+        status: skater.id === first?.id ? 'READY' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING',
+      })),
+    }
+  })
 
   const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'stage'>) =>
     update(current => ({ ...current, ...values }))
@@ -91,5 +111,5 @@ export function useFestival() {
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, setStatus, setVolume, reset, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
+  return { state, start, finishAndNext, move, setStatus, setVolume, reset, beginSecondStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
 }

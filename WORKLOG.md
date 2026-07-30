@@ -21,3 +21,5 @@
 | 16:05 | feat(queue): mover, marcar ausente y reactivar desde listado |
 | 16:05 | test: builds Sites/Pages y lint OK |
 | 16:12 | style(queue): ausentes tachadas, atenuadas y diferenciadas en rojo |
+| 16:25 | feat(search): sugerencias instantáneas por nombre, club y número |
+| 16:25 | feat(stage): cierre de primera etapa, inicio de segunda y resultado por patinadora |
