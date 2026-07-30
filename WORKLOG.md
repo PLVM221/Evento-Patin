@@ -20,3 +20,4 @@
 | 16:05 | feat(admin): reinicio, botones funcionales, administración de evento, etapa, club organizador, participantes, clubes y audios |
 | 16:05 | feat(queue): mover, marcar ausente y reactivar desde listado |
 | 16:05 | test: builds Sites/Pages y lint OK |
+| 16:12 | style(queue): ausentes tachadas, atenuadas y diferenciadas en rojo |

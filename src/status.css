@@ -1,0 +1,16 @@
+.queue-row.absent {
+  color: #c55b66;
+  background: #fff2f3;
+  box-shadow: inset 3px 0 #e65f6b;
+  opacity: 0.72;
+}
+
+.queue-row.absent .person strong,
+.queue-row.absent .person small {
+  color: #c55b66;
+  text-decoration: line-through;
+}
+
+.queue-row.absent .number {
+  color: #d37a83;
+}

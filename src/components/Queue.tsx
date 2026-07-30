@@ -19,7 +19,7 @@ export function Queue({ skaters, activeId, onMove, onSelect, onStatus }: QueuePr
       <div className="queue-head"><span>#</span><span>PARTICIPANTE</span><span>CLUB</span><span>TANDA</span><span>ESTADO</span><span /></div>
       <div className="queue-scroll">
         {skaters.map((skater, index) => (
-          <div key={skater.id} className={`queue-row ${skater.id === activeId ? 'active' : ''} ${skater.status === 'FINISHED' ? 'finished' : ''}`}>
+          <div key={skater.id} className={`queue-row ${skater.id === activeId ? 'active' : ''} ${skater.status === 'FINISHED' ? 'finished' : ''} ${skater.status === 'ABSENT' ? 'absent' : ''}`}>
             <span className="number">{skater.number}</span>
             <button className="person" onClick={() => onSelect(skater)}><strong>{fullName(skater)}</strong><small>{skater.track}</small></button>
             <span>{skater.club}</span>
