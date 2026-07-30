@@ -15,3 +15,12 @@
 - Licencia: dominio público
 
 Los temas musicales comerciales mostrados en datos demo no están incluidos.
+
+## Locuciones
+
+- `locutor/presentacion.wav`
+- `locutor/proxima.wav`
+- `locutor/felicitaciones.wav`
+
+Generadas localmente con Microsoft Speech Platform, voz instalada “Microsoft Sabina Desktop”.
+Textos propios del proyecto. No requieren conexión durante el evento.

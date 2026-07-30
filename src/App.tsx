@@ -36,7 +36,9 @@ function App() {
     const handleShortcut = (event: KeyboardEvent) => {
       if (event.key === 'F1') { event.preventDefault(); playEffect('aplausos.ogg', .7) }
       if (event.key === 'F2') { event.preventDefault(); playEffect('aplausos.ogg') }
-      if (event.key === 'F4') { event.preventDefault(); playEffect('campana.ogg', .85) }
+      if (event.key === 'F3') { event.preventDefault(); playEffect('locutor/presentacion.wav') }
+      if (event.key === 'F4') { event.preventDefault(); playEffect('locutor/proxima.wav') }
+      if (event.key === 'F6') { event.preventDefault(); playEffect('locutor/felicitaciones.wav') }
     }
     window.addEventListener('keydown', handleShortcut)
     return () => window.removeEventListener('keydown', handleShortcut)
@@ -93,9 +95,9 @@ function App() {
           <div className="sound-buttons">
             <button onClick={() => playEffect('aplausos.ogg', .7)}><span>👏</span><strong>APLAUSOS</strong><kbd>F1</kbd></button>
             <button onClick={() => playEffect('aplausos.ogg')}><span>👏👏</span><strong>APLAUSOS FUERTES</strong><kbd>F2</kbd></button>
-            <button><Mic2 /><strong>PRESENTACIÓN</strong><kbd>F3</kbd></button>
-            <button onClick={() => playEffect('campana.ogg', .85)}><Bell /><strong>CAMPANA</strong><kbd>F4</kbd></button>
-            <button><span>🎉</span><strong>FELICITACIONES</strong><kbd>F6</kbd></button>
+            <button onClick={() => playEffect('locutor/presentacion.wav')}><Mic2 /><strong>PRESENTACIÓN</strong><kbd>F3</kbd></button>
+            <button onClick={() => playEffect('locutor/proxima.wav')}><Bell /><strong>PRÓXIMA</strong><kbd>F4</kbd></button>
+            <button onClick={() => playEffect('locutor/felicitaciones.wav')}><span>🎉</span><strong>FELICITACIONES</strong><kbd>F6</kbd></button>
             <button className="add-sound">＋ Personalizar</button>
           </div>
         </section>
