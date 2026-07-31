@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Headphones, Music2, Plus, Settings2, ShoppingBasket, Users, X } from 'lucide-react'
 import type { FestivalState, Skater } from '../models'
 import { fullName } from '../models'
@@ -107,7 +107,8 @@ function ClubRow({ club, logo, onRename, onLogo }: { club: string; logo?: string
 function BuffetAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddBuffetItem']; onUpdate: Props['onUpdateBuffetItem']; onRemove: Props['onRemoveBuffetItem'] }) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState(0)
-  return <div><div className="admin-intro"><h3>Bufet</h3><p>Cargá los productos y precios que verán los espectadores desde el QR.</p></div><form className="buffet-add" onSubmit={event => { event.preventDefault(); if (name.trim() && price >= 0) { onAdd(name.trim(), price); setName(''); setPrice(0) } }}><input placeholder="Producto" required value={name} onChange={event => setName(event.target.value)} /><input aria-label="Precio" type="number" min="0" step="1" required value={price} onChange={event => setPrice(Number(event.target.value))} /><button><Plus /> Agregar</button></form><div className="buffet-admin-list">{state.buffetItems.map(item => <div key={item.id}><input value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><label>$ <input type="number" min="0" value={item.price} onChange={event => onUpdate(item.id, { price: Number(event.target.value) })} /></label><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
+  const productInput = useRef<HTMLInputElement>(null)
+  return <div><div className="admin-intro"><h3>Bufet</h3><p>Cargá los productos y precios que verán los espectadores desde el QR.</p></div><form className="buffet-add" onSubmit={event => { event.preventDefault(); if (name.trim() && price >= 0) { onAdd(name.trim(), price); setName(''); setPrice(0); window.setTimeout(() => productInput.current?.focus(), 0) } }}><input ref={productInput} placeholder="Producto" required value={name} onChange={event => setName(event.target.value)} /><input aria-label="Precio" type="number" min="0" step="1" required value={price} onChange={event => setPrice(Number(event.target.value))} /><button><Plus /> Agregar</button></form><div className="buffet-admin-list">{state.buffetItems.map(item => <div key={item.id}><input value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><label>$ <input type="number" min="0" value={item.price} onChange={event => onUpdate(item.id, { price: Number(event.target.value) })} /></label><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
 }
 
 function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props['onUpdateSkater'] }) {
