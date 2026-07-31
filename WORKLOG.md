@@ -41,3 +41,4 @@
 | 2026-07-31 | feat(reset): borrado total, bufet visible y escudo del club en participante activa |
 | 2026-07-31 | fix(realtime): QR tolerante a estados anteriores y lectura exclusiva del último mensaje |
 | 2026-07-31 | fix(bufet): sincronización pública separada para evitar límites de tamaño |
+| 2026-07-31 | chore(public): actualización automática del QR cada 5 segundos |

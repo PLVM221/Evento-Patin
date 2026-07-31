@@ -741,7 +741,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
     sources.forEach(item => { item.onmessage = (event) => applyEnvelope(event.data) })
     const poll = window.setInterval(() => {
       topics.forEach(topic => { void fetch(`https://ntfy.sh/${encodeURIComponent(topic)}/json?poll=1&since=latest&_=${Date.now()}`).then((response) => response.text()).then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => { if (topic === channel) setConnected(false) }) })
-    }, 3000)
+    }, 5000)
     return () => {
       sources.forEach(item => item.close())
       window.clearInterval(poll)
