@@ -73,6 +73,8 @@ export interface FestivalState {
   buffetItems: BuffetItem[]
   showBuffet: boolean
   showRaffle: boolean
+  useFrameOnBuffet: boolean
+  useFrameOnRaffle: boolean
   raffleTicketPrice: number
   rafflePrices: RafflePrice[]
   rafflePrizes: RafflePrize[]

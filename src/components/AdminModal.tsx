@@ -54,7 +54,7 @@ interface Props {
   onAddBuffetItem: (name: string, price: number) => void
   onUpdateBuffetItem: (id: string, values: Partial<FestivalState['buffetItems'][number]>) => void
   onRemoveBuffetItem: (id: string) => void
-  onSetPublicSectionVisibility: (section: 'showBuffet' | 'showRaffle', visible: boolean) => void
+  onSetPublicSectionVisibility: (section: 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle', visible: boolean) => void
   onSetRaffleTicketPrice: (price: number) => void
   onAddRafflePrice: (quantity: number, price: number) => void
   onRemoveRafflePrice: (id: string) => void
@@ -89,6 +89,8 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
         <div className="admin-content">
           {tab === 'bufet' && <VisibilityToggle checked={state.showBuffet} title="Mostrar Bufet en la web del QR" onChange={visible => onSetPublicSectionVisibility('showBuffet', visible)} />}
           {tab === 'sorteo' && <VisibilityToggle checked={state.showRaffle} title="Mostrar Sorteo en la web del QR" onChange={visible => onSetPublicSectionVisibility('showRaffle', visible)} />}
+          {tab === 'bufet' && <VisibilityToggle checked={state.useFrameOnBuffet} title="Usar el marco del QR en Bufet" onChange={visible => onSetPublicSectionVisibility('useFrameOnBuffet', visible)} />}
+          {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}

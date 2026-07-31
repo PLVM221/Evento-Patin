@@ -31,6 +31,8 @@ export const initialFestival: FestivalState = {
   ],
   showBuffet: true,
   showRaffle: true,
+  useFrameOnBuffet: true,
+  useFrameOnRaffle: true,
   raffleTicketPrice: 0,
   rafflePrices: [],
   rafflePrizes: [],
