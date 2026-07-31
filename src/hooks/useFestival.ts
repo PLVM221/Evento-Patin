@@ -23,7 +23,7 @@ const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStage
       showRaffle: parsed.showRaffle ?? true,
       raffleTicketPrice: parsed.raffleTicketPrice ?? 0,
       rafflePrices: parsed.rafflePrices ?? (parsed.raffleTicketPrice ? [{ id: 'legacy-price', quantity: 1, price: parsed.raffleTicketPrice }] : []),
-      rafflePrizes: (parsed.rafflePrizes ?? []).map((prize, index) => ({ ...prize, order: prize.order ?? index + 1 })),
+      rafflePrizes: (parsed.rafflePrizes ?? []).map((prize, index) => ({ ...prize, order: Number(prize.order) > 0 ? Number(prize.order) : index + 1 })),
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageNumber: skater.stageNumber ?? 1,
