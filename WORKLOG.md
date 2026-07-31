@@ -34,3 +34,4 @@
 | 2026-07-31 | feat(receso): intervalo configurable entre etapas con cuenta regresiva pública y del operador |
 | 2026-07-31 | feat(seños): relación clubes-patinadoras-seños y presentación en operador/QR |
 | 2026-07-31 | feat(clubes): escudos opcionales, iniciales de respaldo y sección Clubes invitados al pie |
+| 2026-07-31 | fix(clubes): organizador separado de invitados con escudo y tarjeta destacada |

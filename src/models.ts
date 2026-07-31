@@ -28,6 +28,7 @@ export interface Skater {
 export interface FestivalState {
   name: string
   organizer: string
+  organizerLogo: string
   location: string
   eventDate: string
   startTime: string

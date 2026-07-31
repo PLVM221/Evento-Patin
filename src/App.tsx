@@ -121,6 +121,7 @@ function App() {
     const snapshot = {
       name: state.name,
       organizer: state.organizer,
+      organizerLogo: state.organizerLogo,
       location: state.location,
       eventDate: state.eventDate,
       startTime: state.startTime,
@@ -265,9 +266,8 @@ function App() {
           </div>
         </div>
         <div className="event-name">
-          <span>EVENTO ACTUAL · {stageName.toUpperCase()}</span>
-          <strong>{state.name}</strong>
-          <small>Organiza: {state.organizer}</small>
+          <div className="header-organizer-logo">{state.organizerLogo ? <img src={state.organizerLogo} alt={`Escudo de ${state.organizer}`} /> : state.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
+          <div><span>EVENTO ACTUAL · {stageName.toUpperCase()}</span><strong>{state.name}</strong><small>Organiza: {state.organizer}</small></div>
         </div>
         <div className="header-actions">
           <div className="live-state">
@@ -558,7 +558,7 @@ function App() {
         </section>
 
         <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />
-        <ParticipatingClubs clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} />
+        <ParticipatingClubs organizer={state.organizer} clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} />
       </main>
       <audio ref={effectPlayer} preload="auto" />
 
@@ -625,8 +625,8 @@ function App() {
   )
 }
 
-function ParticipatingClubs({ clubs, clubLogos, teachers, skaters }: { clubs: string[]; clubLogos: Record<string, string>; teachers: Teacher[]; skaters: Array<{ club: string }> }) {
-  const participating = clubs.filter((club) => skaters.some((skater) => skater.club === club))
+function ParticipatingClubs({ organizer, clubs, clubLogos, teachers, skaters }: { organizer: string; clubs: string[]; clubLogos: Record<string, string>; teachers: Teacher[]; skaters: Array<{ club: string }> }) {
+  const participating = clubs.filter((club) => club.trim().toLowerCase() !== organizer.trim().toLowerCase() && skaters.some((skater) => skater.club === club))
   if (participating.length === 0) return null
   return <section className="participating-clubs"><div className="clubs-heading"><small>COMUNIDAD DEL EVENTO</small><h2>Clubes invitados</h2><p>Cada equipo junto a sus seños responsables.</p></div><div className="clubs-grid">{participating.map((club) => { const clubTeachers = teachers.filter((teacher) => teacher.club === club); const count = skaters.filter((skater) => skater.club === club).length; const initials = club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase(); return <article key={club}><div className="club-monogram">{clubLogos[club] ? <img src={clubLogos[club]} alt={`Escudo de ${club}`} /> : initials}</div><div><strong>{club}</strong><span>{count} {count === 1 ? 'patinadora' : 'patinadoras'}</span><small>{clubTeachers.length ? `Seño${clubTeachers.length > 1 ? 's' : ''}: ${clubTeachers.map((teacher) => teacher.name).join(' · ')}` : 'Seño pendiente de asignación'}</small></div></article> })}</div></section>
 }
@@ -710,7 +710,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -754,12 +754,9 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
       </div>
       <h1>{live.name}</h1>
       <div className="public-organizer">
-        <small>CLUB ORGANIZADOR</small>
-        <strong>{live.organizer}</strong>
+        <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
+        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}</span></div>
       </div>
-      <p>
-        {live.location} · Etapa {live.currentStage} de {live.stageCount}
-      </p>
       {live.activeBreakAfter ? (
         <div className="public-break">
           <small>RECESO EN CURSO</small>
@@ -840,7 +837,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
           ))}
         </>
       )}
-      <ParticipatingClubs clubs={live.clubs ?? []} clubLogos={live.clubLogos ?? {}} teachers={live.teachers ?? []} skaters={live.skaters} />
+      <ParticipatingClubs organizer={live.organizer} clubs={live.clubs ?? []} clubLogos={live.clubLogos ?? {}} teachers={live.teachers ?? []} skaters={live.skaters} />
       <div className="public-credit">
         Desarrollado por <strong>PLVM Soft</strong>
       </div>

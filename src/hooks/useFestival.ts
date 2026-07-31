@@ -12,6 +12,7 @@ const restore = (): FestivalState => {
     return {
       ...initialFestival,
       ...parsed,
+      organizerLogo: parsed.organizerLogo ?? '',
       stageCount: parsed.stageCount ?? 2,
       currentStage: parsed.currentStage ?? (parsed.stage === 'Segunda etapa' ? 2 : 1),
       completedStages: parsed.completedStages ?? (parsed.firstStageCompleted ? [1] : []),
@@ -136,7 +137,7 @@ export function useFestival() {
 
   const finishBreak = () => update(current => ({ ...current, activeBreakAfter: undefined, breakEndsAt: undefined }))
 
-  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) =>
+  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) =>
     update(current => ({ ...current, ...values, currentStage: Math.min(current.currentStage, values.stageCount) as StageNumber, completedStages: current.completedStages.filter(stage => stage <= values.stageCount) }))
 
   const addSkater = (skater: Omit<FestivalState['skaters'][number], 'id' | 'status'>) =>

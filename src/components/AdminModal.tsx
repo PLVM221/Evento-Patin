@@ -8,7 +8,7 @@ type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'audios'
 interface Props {
   state: FestivalState
   onClose: () => void
-  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) => void
+  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
   onRenameClub: (from: string, to: string) => void
@@ -46,12 +46,12 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
 }
 
 function EventForm({ state, onSave }: { state: FestivalState; onSave: Props['onUpdateEvent'] }) {
-  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount })
+  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount })
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(values) }
   return <form className="admin-form" onSubmit={submit}>
     <div className="admin-intro"><h3>Datos del evento</h3><p>Estos datos aparecen en el panel del operador.</p></div>
     <label>Nombre del evento<input required value={values.name} onChange={event => setValues({ ...values, name: event.target.value })} /></label>
-    <label>Club organizador<input required value={values.organizer} onChange={event => setValues({ ...values, organizer: event.target.value })} /></label>
+    <div className="organizer-admin"><div className="organizer-logo-preview">{values.organizerLogo ? <img src={values.organizerLogo} alt="Escudo del club organizador" /> : values.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div><label>Club organizador<input required value={values.organizer} onChange={event => setValues({ ...values, organizer: event.target.value })} /></label><label className="file-btn">{values.organizerLogo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setValues(current => ({ ...current, organizerLogo: String(reader.result) })); reader.readAsDataURL(file) }} /></label></div>
     <label>Ubicación<input required placeholder="Ciudad, provincia" value={values.location} onChange={event => setValues({ ...values, location: event.target.value })} /></label>
     <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => setValues({ ...values, eventDate: event.target.value })} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => setValues({ ...values, startTime: event.target.value })} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => setValues({ ...values, countdownMinutes: Number(event.target.value) })} /></label></div>
     <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial de cada patinadora.</small></label>

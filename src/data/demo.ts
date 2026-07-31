@@ -3,6 +3,7 @@ import type { FestivalState } from '../models'
 export const initialFestival: FestivalState = {
   name: 'Festival Provincial 2026',
   organizer: 'Club Atlético Provincial',
+  organizerLogo: '',
   location: 'Rosario, Santa Fe',
   eventDate: '2026-08-15',
   startTime: '09:00',
