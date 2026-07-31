@@ -8,9 +8,10 @@ interface PlayerProps {
   elapsed: number
   volume: number
   onVolume: (value: number) => void
+  disabled?: boolean
 }
 
-export function Player({ skater, elapsed, volume, onVolume }: PlayerProps) {
+export function Player({ skater, elapsed, volume, onVolume, disabled = false }: PlayerProps) {
   const [playing, setPlaying] = useState(false)
   const [position, setPosition] = useState(elapsed)
   const audio = useRef<HTMLAudioElement>(null)
@@ -47,15 +48,15 @@ export function Player({ skater, elapsed, volume, onVolume }: PlayerProps) {
     <div className="player">
       <div className="timeline">
         <span>{formatTime(position)}</span>
-        <input aria-label="Progreso" type="range" min="0" max={duration} value={position} onChange={event => seek(Number(event.target.value))} />
+        <input disabled={disabled} aria-label="Progreso" type="range" min="0" max={duration} value={position} onChange={event => seek(Number(event.target.value))} />
         <span className="remaining">-{formatTime(duration - position)}</span>
       </div>
       <div className="player-controls">
-        <button className="icon-btn" title="Retroceder 5 segundos" onClick={() => seek(Math.max(0, position - 5))}><SkipBack /></button>
-        <button className="play-btn" onClick={toggle}>{playing ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}{playing ? 'PAUSA' : 'PLAY'}</button>
-        <button className="icon-btn stop" title="Detener" onClick={() => { setPlaying(false); seek(0); audio.current?.pause() }}><Square fill="currentColor" /></button>
-        <button className="icon-btn" title="Avanzar 5 segundos" onClick={() => seek(Math.min(duration, position + 5))}><SkipForward /></button>
-        <button className="icon-btn" title="Reiniciar" onClick={() => seek(0)}><RotateCcw /></button>
+        <button disabled={disabled} className="icon-btn" title="Retroceder 5 segundos" onClick={() => seek(Math.max(0, position - 5))}><SkipBack /></button>
+        <button disabled={disabled} className="play-btn" onClick={toggle}>{playing ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}{playing ? 'PAUSA' : 'PLAY'}</button>
+        <button disabled={disabled} className="icon-btn stop" title="Detener" onClick={() => { setPlaying(false); seek(0); audio.current?.pause() }}><Square fill="currentColor" /></button>
+        <button disabled={disabled} className="icon-btn" title="Avanzar 5 segundos" onClick={() => seek(Math.min(duration, position + 5))}><SkipForward /></button>
+        <button disabled={disabled} className="icon-btn" title="Reiniciar" onClick={() => seek(0)}><RotateCcw /></button>
         <label className="volume">VOL <input aria-label="Volumen música" type="range" min="0" max="100" value={volume} onChange={event => onVolume(Number(event.target.value))} /><strong>{volume}%</strong></label>
       </div>
       {skater?.audioUrl && <audio ref={audio} src={skater.audioUrl} preload="auto" onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onEnded={() => setPlaying(false)} />}

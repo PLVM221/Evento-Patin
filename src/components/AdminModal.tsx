@@ -54,7 +54,7 @@ function EventForm({ state, onSave }: { state: FestivalState; onSave: Props['onU
 }
 
 function SkaterAdmin({ state, onAdd, onUpdate }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater'] }) {
-  const empty = { number: state.skaters.length + 1, firstName: '', lastName: '', club: '', category: '', track: '', duration: 180, heat: 'Tanda 1', notes: '' }
+  const empty: Omit<Skater, 'id' | 'status'> = { number: state.skaters.length + 1, firstName: '', lastName: '', club: '', category: '', track: '', duration: 180, heat: 'Tanda 1', stageNumber: 1, notes: '' }
   const [form, setForm] = useState(empty)
   const submit = (event: FormEvent) => { event.preventDefault(); onAdd(form); setForm({ ...empty, number: form.number + 1 }) }
   return <div>
@@ -66,9 +66,10 @@ function SkaterAdmin({ state, onAdd, onUpdate }: { state: FestivalState; onAdd: 
       <input placeholder="Club" required value={form.club} onChange={event => setForm({ ...form, club: event.target.value })} />
       <input placeholder="Coreografía / canción" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
       <select value={form.heat} onChange={event => setForm({ ...form, heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select>
+      <select aria-label="Etapa" value={form.stageNumber} onChange={event => setForm({ ...form, stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select>
       <button><Plus /> Agregar</button>
     </form>
-    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><small>{skater.club}</small></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select value={skater.heat} onChange={event => onUpdate(skater.id, { heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select></div>)}</div>
+    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><small>{skater.club}</small></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></div>)}</div>
   </div>
 }
 

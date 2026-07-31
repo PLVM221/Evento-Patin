@@ -12,6 +12,7 @@ export interface Skater {
   duration: number
   heat: string
   status: SkaterStatus
+  stageNumber: StageNumber
   stageResults?: Partial<Record<StageNumber, SkaterStatus>>
   notes?: string
   audioUrl?: string

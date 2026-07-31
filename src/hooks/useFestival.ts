@@ -18,6 +18,7 @@ const restore = (): FestivalState => {
       stageOrders: parsed.stageOrders ?? {},
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
+        stageNumber: skater.stageNumber ?? 1,
         stageResults: skater.stageResults ?? (skater.firstStageStatus ? { 1: skater.firstStageStatus } : {}),
       })),
     }
@@ -52,8 +53,9 @@ export function useFestival() {
   }))
 
   const finishAndNext = () => update(current => {
+    if (!current.started) return current
     const index = current.skaters.findIndex(skater => skater.id === current.activeId)
-    const next = current.skaters.slice(index + 1).find(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
+    const next = current.skaters.slice(index + 1).find(skater => skater.stageNumber === current.currentStage && (skater.status === 'PENDING' || skater.status === 'POSTPONED'))
     return {
       ...current,
       activeId: next?.id,
@@ -68,11 +70,16 @@ export function useFestival() {
 
   const move = (id: string, offset: number) => update(current => {
     if (id === current.activeId) return current
+    const selected = current.skaters.find(skater => skater.id === id)
+    if (!selected) return current
+    const stageSkaters = current.skaters.filter(skater => skater.stageNumber === selected.stageNumber)
+    const stageIndex = stageSkaters.findIndex(skater => skater.id === id)
+    const target = stageSkaters[Math.max(0, Math.min(stageSkaters.length - 1, stageIndex + offset))]
+    if (!target || target.id === id) return current
     const from = current.skaters.findIndex(skater => skater.id === id)
-    const to = Math.max(0, Math.min(current.skaters.length - 1, from + offset))
+    const to = current.skaters.findIndex(skater => skater.id === target.id)
     const skaters = [...current.skaters]
-    const [item] = skaters.splice(from, 1)
-    skaters.splice(to, 0, item)
+    ;[skaters[from], skaters[to]] = [skaters[to], skaters[from]]
     return { ...current, skaters }
   })
 
@@ -85,9 +92,9 @@ export function useFestival() {
     completedStages: [],
     stageOrders: {},
     started: false,
-    activeId: current.skaters[0]?.id,
+    activeId: current.skaters.find(skater => skater.stageNumber === 1)?.id,
     elapsed: 0,
-    skaters: current.skaters.map((skater, index) => ({ ...skater, stageResults: {}, status: index === 0 ? 'READY' : 'PENDING' })),
+    skaters: current.skaters.map(skater => ({ ...skater, stageResults: {}, status: skater.id === current.skaters.find(item => item.stageNumber === 1)?.id ? 'READY' : 'PENDING' })),
   }))
 
   const completeStage = () => update(current => {
@@ -95,22 +102,28 @@ export function useFestival() {
     return {
       ...current,
       completedStages: [...new Set([...current.completedStages, finishingStage])] as StageNumber[],
-      stageOrders: { ...current.stageOrders, [finishingStage]: current.skaters.map(skater => skater.id) },
+      stageOrders: { ...current.stageOrders, [finishingStage]: current.skaters.filter(skater => skater.stageNumber === finishingStage).map(skater => skater.id) },
       started: false,
       elapsed: 0,
       activeId: undefined,
       skaters: current.skaters.map(skater => ({
         ...skater,
-        stageResults: { ...skater.stageResults, [finishingStage]: skater.status },
+        stageResults: skater.stageNumber === finishingStage ? { ...skater.stageResults, [finishingStage]: skater.status } : skater.stageResults,
       })),
     }
   })
 
   const startNextStage = () => update(current => {
     if (current.currentStage >= current.stageCount || !current.completedStages.includes(current.currentStage)) return current
-    const eligible = current.skaters.filter(skater => skater.status !== 'ABSENT')
+    const nextStage = (current.currentStage + 1) as StageNumber
+    const byId = new Map(current.skaters.map(skater => [skater.id, skater]))
+    const stageIds = current.skaters.filter(skater => skater.stageNumber === nextStage).map(skater => skater.id)
+    const orderedStage = (current.stageOrders[nextStage] ?? stageIds).map(id => byId.get(id)!).filter(Boolean)
+    const otherStages = current.skaters.filter(skater => skater.stageNumber !== nextStage)
+    const ordered = [...orderedStage, ...otherStages]
+    const eligible = orderedStage.filter(skater => skater.status !== 'ABSENT')
     const first = eligible[0]
-    return { ...current, currentStage: (current.currentStage + 1) as StageNumber, started: false, elapsed: 0, activeId: first?.id, skaters: current.skaters.map(skater => ({ ...skater, status: skater.id === first?.id ? 'READY' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' })) }
+    return { ...current, currentStage: nextStage, started: true, elapsed: 0, activeId: first?.id, skaters: ordered.map(skater => skater.stageNumber === nextStage ? ({ ...skater, status: skater.id === first?.id ? 'SKATING' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' }) : skater) }
   })
 
   const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'stageCount'>) =>
@@ -126,13 +139,13 @@ export function useFestival() {
     update(current => ({ ...current, skaters: current.skaters.map(skater => skater.club === from ? { ...skater, club: to } : skater) }))
 
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
-    const ids = [...(current.stageOrders[stage] ?? current.skaters.map(skater => skater.id))]
-    const from = ids.indexOf(id)
-    if (from < 0) return current
-    ids.splice(from, 1)
+    const ids = [...(current.stageOrders[stage] ?? current.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id))].filter(skaterId => skaterId !== id)
     ids.splice(Math.max(0, Math.min(ids.length, position - 1)), 0, id)
     const byId = new Map(current.skaters.map(skater => [skater.id, skater]))
-    return { ...current, stageOrders: { ...current.stageOrders, [stage]: ids }, skaters: stage === current.currentStage ? ids.map(skaterId => byId.get(skaterId)!).filter(Boolean) : current.skaters }
+    const updated = current.skaters.map(skater => skater.id === id ? { ...skater, stageNumber: stage } : skater)
+    const others = updated.filter(skater => skater.stageNumber !== stage)
+    const ordered = ids.map(skaterId => byId.get(skaterId)).filter(Boolean).map(skater => skater!.id === id ? { ...skater!, stageNumber: stage } : skater!)
+    return { ...current, stageOrders: { ...current.stageOrders, [stage]: ids }, skaters: stage === current.currentStage ? [...ordered, ...others] : updated }
   })
 
   const undo = () => {

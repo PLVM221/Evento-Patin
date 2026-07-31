@@ -36,14 +36,14 @@ function App() {
     { id: 'next', name: 'PRÓXIMA', icon: '🔔', file: 'locutor/proxima.wav', shortcut: 'F4', gain: 1 },
     { id: 'congrats', name: 'FELICITACIONES', icon: '🎉', file: 'locutor/felicitaciones.wav', shortcut: 'F6', gain: 1 },
   ])
-  const active = state.skaters.find(skater => skater.id === state.activeId)
-  const waiting = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
+  const stageSkaters = state.skaters.filter(skater => skater.stageNumber === state.currentStage)
+  const active = stageSkaters.find(skater => skater.id === state.activeId)
+  const waiting = stageSkaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
-  const finished = state.skaters.filter(skater => skater.status === 'FINISHED').length
-  const visible = useMemo(() => state.skaters.filter(skater => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [state.skaters, query])
+  const finished = stageSkaters.filter(skater => skater.status === 'FINISHED').length
+  const visible = useMemo(() => stageSkaters.filter(skater => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [stageSkaters, query])
   const suggestions = query.trim().length ? visible.slice(0, 6) : []
   const stageName = `Etapa ${state.currentStage} de ${state.stageCount}`
-  const hasNextStage = state.currentStage < state.stageCount
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
   const publicChannel = new URLSearchParams(window.location.search).get('publico')
   const publicUrl = `${window.location.origin}${window.location.pathname}?publico=${liveChannel}`
@@ -52,9 +52,11 @@ function App() {
 
   useEffect(() => {
     if (publicChannel) return
-    const snapshot = { name: state.name, location: state.location, eventDate: state.eventDate, startTime: state.startTime, stageCount: state.stageCount, currentStage: state.currentStage, started: state.started, activeId: state.activeId, skaters: state.skaters.map(({ id, firstName, lastName, club, track, status }) => ({ id, firstName, lastName, club, track, status })) }
-    const timer = window.setTimeout(() => { void fetch('https://ntfy.sh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: liveChannel, title: 'Pista en vivo', message: JSON.stringify(snapshot) }) }) }, 350)
-    return () => window.clearTimeout(timer)
+    const snapshot = { name: state.name, location: state.location, eventDate: state.eventDate, startTime: state.startTime, stageCount: state.stageCount, currentStage: state.currentStage, started: state.started, activeId: state.activeId, stageOrders: Object.fromEntries(Array.from({ length: state.stageCount }, (_, index) => { const stage = (index + 1) as StageNumber; return [stage, state.stageOrders[stage] ?? state.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id)] })), skaters: state.skaters.map(({ id, firstName, lastName, club, track, status, stageNumber }) => ({ id, firstName, lastName, club, track, status, stageNumber })) }
+    const publish = () => { void fetch('https://ntfy.sh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: liveChannel, title: 'Pista en vivo', message: JSON.stringify(snapshot) }) }) }
+    const timer = window.setTimeout(publish, 350)
+    const heartbeat = window.setInterval(publish, 5000)
+    return () => { window.clearTimeout(timer); window.clearInterval(heartbeat) }
   }, [state, liveChannel, publicChannel])
 
   const finalize = () => {
@@ -116,7 +118,7 @@ function App() {
       const savedOrder = state.stageOrders[stage as 1 | 2 | 3]
       const ordered = savedOrder
         ? savedOrder.map(id => state.skaters.find(skater => skater.id === id)).filter((skater): skater is Skater => Boolean(skater))
-        : state.skaters
+        : state.skaters.filter(skater => skater.stageNumber === stage)
       ordered.forEach((skater, index) => rows.push([`Etapa ${stage}`, index + 1, skater.number, fullName(skater), skater.club, skater.track]))
     }
     const csv = `\uFEFF${rows.map(row => row.map(quote).join(';')).join('\r\n')}`
@@ -147,9 +149,9 @@ function App() {
 
       <main>
         <section className="stats">
-          <div><Users /><span><small>PARTICIPANTES</small><strong>{state.skaters.length}</strong></span></div>
+          <div><Users /><span><small>PARTICIPANTES ETAPA</small><strong>{stageSkaters.length}</strong></span></div>
           <div><Check /><span><small>FINALIZADAS</small><strong>{finished}</strong></span></div>
-          <div><Clock3 /><span><small>RESTANTES</small><strong>{state.skaters.length - finished}</strong></span></div>
+          <div><Clock3 /><span><small>RESTANTES</small><strong>{stageSkaters.length - finished}</strong></span></div>
           <div className="stage-stat"><span><small>ETAPA ACTUAL</small><strong>{state.currentStage} / {state.stageCount}</strong></span></div>
           <div className="estimate"><span><small>FINAL ESTIMADO</small><strong>18:42</strong></span><em>En horario</em></div>
           <div className="search-wrap">
@@ -161,10 +163,20 @@ function App() {
 
         <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
 
-        {!state.started && !currentStageCompleted && <button className="start-banner" onClick={() => window.confirm(`¿Iniciar etapa ${state.currentStage} desde la participante preparada?`) && start()}><span><PlayIcon /> INICIAR ETAPA {state.currentStage}</span><small>La música quedará preparada. No comenzará automáticamente.</small></button>}
-        {!currentStageCompleted && <button className="stage-transition" onClick={() => window.confirm(`¿Finalizar etapa ${state.currentStage}? Se guardará el resultado de cada patinadora.`) && completeStage()}><Check /><span><strong>FINALIZAR ETAPA {state.currentStage}</strong><small>Guarda resultados de esta pasada sin iniciar la siguiente</small></span></button>}
-        {currentStageCompleted && hasNextStage && <button className="stage-transition start-next-stage" onClick={() => window.confirm(`¿Preparar etapa ${state.currentStage + 1}?`) && startNextStage()}><RefreshCcw /><span><strong>INICIAR ETAPA {state.currentStage + 1}</strong><small>Podés iniciarla cuando quieras</small></span></button>}
-        {state.completedStages.length > 0 && <div className="stage-complete"><Check /> {state.completedStages.map(stage => `Etapa ${stage} finalizada`).join(' · ')} · resultados guardados en el listado</div>}
+        <div className="stage-controls">{Array.from({ length: state.stageCount }, (_, index) => {
+          const stage = (index + 1) as StageNumber
+          const completed = state.completedStages.includes(stage)
+          const isCurrent = stage === state.currentStage
+          const canStartNext = stage === state.currentStage + 1 && currentStageCompleted
+          const label = completed ? `ETAPA ${stage} FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ETAPA ${stage}` : `INICIAR ETAPA ${stage}`) : canStartNext ? `INICIAR ETAPA ${stage}` : `ETAPA ${stage} PENDIENTE`
+          const action = () => {
+            if (canStartNext) { if (window.confirm(`¿Iniciar etapa ${stage}?`)) startNextStage(); return }
+            if (!isCurrent || completed) return
+            if (state.started) { if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage() }
+            else if (window.confirm(`¿Iniciar etapa ${stage}?`)) start()
+          }
+          return <button key={stage} className={`stage-control ${completed ? 'completed' : ''} ${state.started && isCurrent ? 'running' : ''}`} disabled={!isCurrent && !canStartNext || completed} onClick={action}>{completed ? <Check /> : state.started && isCurrent ? <Check /> : <PlayIcon />}<span><strong>{label}</strong><small>{completed ? 'Resultados guardados' : isCurrent && state.started ? 'Cierra esta pasada sin iniciar la siguiente' : canStartNext || isCurrent ? 'La música no comienza automáticamente' : 'Disponible al finalizar etapa anterior'}</small></span></button>
+        })}</div>
 
         <div className="live-grid">
           <section className="now-card card">
@@ -174,10 +186,10 @@ function App() {
               <h1>{active.firstName}<br /><strong>{active.lastName}</strong></h1>
               <p className="club">{active.club}</p>
               <div className="track"><span>♫</span><div><small>COREOGRAFÍA / CANCIÓN</small><strong>{active.track}</strong><em>{active.category}</em></div></div>
-              <Player skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={value => setVolume('musicVolume', value)} />
+              <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={value => setVolume('musicVolume', value)} />
               <div className="critical-actions">
-                <button className="finish" onClick={finalize}><Check /> FINALIZAR</button>
-                <button className="next" onClick={finalize}>SIGUIENTE <ChevronRight /></button>
+                <button disabled={!state.started} className="finish" onClick={finalize}><Check /> FINALIZAR</button>
+                <button disabled={!state.started} className="next" onClick={finalize}>SIGUIENTE <ChevronRight /></button>
               </div>
             </> : <div className="empty">Festival finalizado</div>}
           </section>
@@ -224,23 +236,26 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><small>PARTICIPANTE Nº {skater.number}</small><h2>{fullName(skater)}</h2><p>{skater.club} · {skater.category}</p><div className="modal-track">♫ {skater.track} · {formatTime(skater.duration)}</div><div className="move-position"><label>Etapa<select value={stage} onChange={event => setStage(Number(event.target.value) as StageNumber)}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></label><label>Posición<input type="number" min="1" max={state.skaters.length} value={position} onChange={event => setPosition(Number(event.target.value))} /></label><button onClick={() => { onMove(skater.id, stage, position); onClose() }}>Mover</button></div><div className="modal-actions">{skater.status === 'ABSENT' ? <button onClick={() => { onStatus(skater.id, 'PENDING'); onClose() }}>Reactivar</button> : <button onClick={() => { onStatus(skater.id, 'ABSENT'); onClose() }}>No se presenta</button>}<button onClick={() => { onStatus(skater.id, 'POSTPONED'); onClose() }}>Posponer</button></div></div></div>
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeId'> & { skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status'>> }
+type PublicState = Pick<FestivalState, 'name' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeId' | 'stageOrders'> & { skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>> }
 
 function PublicView({ state, channel }: { state: PublicState; channel: string }) {
   const [live, setLive] = useState<PublicState>(state)
   const [connected, setConnected] = useState(false)
   useEffect(() => {
+    const applyEnvelope = (raw: string) => { try { const envelope = JSON.parse(raw); if (envelope.event === 'message') setLive(JSON.parse(envelope.message)) } catch { /* mensaje ajeno ignorado */ } }
     const source = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse?since=all`)
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
-    source.onmessage = event => { try { const envelope = JSON.parse(event.data); if (envelope.event === 'message') setLive(JSON.parse(envelope.message)) } catch { /* mensaje ajeno ignorado */ } }
-    return () => source.close()
+    source.onmessage = event => applyEnvelope(event.data)
+    const poll = window.setInterval(() => { void fetch(`https://ntfy.sh/${encodeURIComponent(channel)}/json?poll=1&since=latest&_=${Date.now()}`).then(response => response.text()).then(text => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => setConnected(false)) }, 3000)
+    return () => { source.close(); window.clearInterval(poll) }
   }, [channel])
   const active = live.skaters.find(skater => skater.id === live.activeId)
-  const pending = live.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'READY')
+  const pending = live.skaters.filter(skater => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))
   const eventAt = new Date(`${live.eventDate}T${live.startTime}:00`).getTime()
   const minutes = Math.max(0, Math.ceil((eventAt - Date.now()) / 60000))
-  return <main className="public-view"><div className="public-brand"><Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i></div><h1>{live.name}</h1><p>{live.location} · Etapa {live.currentStage} de {live.stageCount}</p>{!live.started && <div className="public-countdown">Comienza en <strong>{minutes} minutos</strong></div>}<section><small>EN PISTA</small><h2>{active ? fullName(active as Skater) : 'En preparación'}</h2>{active && <p>{active.club} · {active.track}</p>}</section><div className="public-columns"><div><small>A CONTINUACIÓN</small><h3>{pending[0] ? fullName(pending[0] as Skater) : '—'}</h3><p>{pending[0]?.club}</p></div><div><small>YA PASARON</small><strong>{live.skaters.filter(skater => skater.status === 'FINISHED').length}</strong></div><div><small>RESTANTES</small><strong>{pending.length}</strong></div></div><h3 className="public-list-title">Próximas patinadoras</h3>{pending.slice(1, 8).map((skater, index) => <div className="public-row" key={skater.id}><b>{index + 2}</b><span>{fullName(skater as Skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div>)}<div className="public-credit">Desarrollado por <strong>PLVM Soft</strong></div></main>
+  const byId = new Map(live.skaters.map(skater => [skater.id, skater]))
+  return <main className="public-view"><div className="public-brand"><Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i></div><h1>{live.name}</h1><p>{live.location} · Etapa {live.currentStage} de {live.stageCount}</p>{!live.started ? <><div className="public-countdown">Comienza en <strong>{minutes} minutos</strong></div><h3 className="public-list-title">Cronograma completo</h3><div className="public-schedule">{Array.from({ length: live.stageCount }, (_, index) => { const stage = (index + 1) as StageNumber; const ids = live.stageOrders[stage] ?? live.skaters.map(skater => skater.id); return <section key={stage}><h3>Etapa {stage}</h3>{ids.map((id, order) => { const skater = byId.get(id); return skater ? <div className="public-row" key={id}><b>{order + 1}</b><span>{fullName(skater as Skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div> : null })}</section> })}</div></> : <><section><small>EN PISTA</small><h2>{active ? fullName(active as Skater) : 'En preparación'}</h2>{active && <p>{active.club} · {active.track}</p>}</section><div className="public-columns"><div><small>A CONTINUACIÓN</small><h3>{pending[0] ? fullName(pending[0] as Skater) : '—'}</h3><p>{pending[0]?.club}</p></div><div><small>YA PASARON</small><strong>{live.skaters.filter(skater => skater.status === 'FINISHED').length}</strong></div><div><small>RESTANTES</small><strong>{pending.length}</strong></div></div><h3 className="public-list-title">Próximas patinadoras</h3>{pending.slice(1, 8).map((skater, index) => <div className="public-row" key={skater.id}><b>{index + 2}</b><span>{fullName(skater as Skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div>)}</>}<div className="public-credit">Desarrollado por <strong>PLVM Soft</strong></div></main>
 }
 
 export default App
