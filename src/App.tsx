@@ -8,7 +8,7 @@ import { Queue } from './components/Queue'
 import { AdminModal } from './components/AdminModal'
 import { WeatherCard } from './components/WeatherCard'
 import { useFestival } from './hooks/useFestival'
-import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber } from './models'
+import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
 
 function useCountdown(eventDate: string, startTime: string) {
   const [now, setNow] = useState(Date.now())
@@ -37,7 +37,7 @@ function useRemainingUntil(target?: string) {
 }
 
 function App() {
-  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, addTeacher, removeTeacher, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -99,6 +99,7 @@ function App() {
   ])
   const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage)
   const active = stageSkaters.find((skater) => skater.id === state.activeId)
+  const activeTeachers = active ? state.teachers.filter((teacher) => teacher.club === active.club) : []
   const waiting = stageSkaters.filter((skater) => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
   const finished = stageSkaters.filter((skater) => skater.status === 'FINISHED').length
@@ -129,6 +130,8 @@ function App() {
       activeBreakAfter: state.activeBreakAfter,
       breakEndsAt: state.breakEndsAt,
       breakDurationMinutes: state.breakDurationMinutes,
+      clubs: state.clubs,
+      teachers: state.teachers,
       activeId: state.activeId,
       stageOrders: Object.fromEntries(
         Array.from({ length: state.stageCount }, (_, index) => {
@@ -439,6 +442,7 @@ function App() {
                   <strong>{active.lastName}</strong>
                 </h1>
                 <p className="club">{active.club}</p>
+                {activeTeachers.length > 0 && <div className="active-teacher"><small>SEÑO</small><strong>{activeTeachers.map((teacher) => teacher.name).join(' · ')}</strong></div>}
                 <div className="track">
                   <span>♫</span>
                   <div>
@@ -496,6 +500,8 @@ function App() {
             ))}
           </aside>
         </div>
+
+        <ParticipatingClubs clubs={state.clubs} teachers={state.teachers} skaters={state.skaters} />
 
         <section className="soundboard">
           <div className="sound-title">
@@ -571,7 +577,7 @@ function App() {
       </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
-      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} />}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} onAddClub={addClub} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
           <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -617,6 +623,12 @@ function App() {
       )}
     </div>
   )
+}
+
+function ParticipatingClubs({ clubs, teachers, skaters }: { clubs: string[]; teachers: Teacher[]; skaters: Array<{ club: string }> }) {
+  const participating = clubs.filter((club) => skaters.some((skater) => skater.club === club))
+  if (participating.length === 0) return null
+  return <section className="participating-clubs"><div className="clubs-heading"><small>COMUNIDAD DEL EVENTO</small><h2>Clubes participantes</h2><p>Cada equipo junto a sus seños responsables.</p></div><div className="clubs-grid">{participating.map((club) => { const clubTeachers = teachers.filter((teacher) => teacher.club === club); const count = skaters.filter((skater) => skater.club === club).length; return <article key={club}><div className="club-monogram">{club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><strong>{club}</strong><span>{count} {count === 1 ? 'patinadora' : 'patinadoras'}</span><small>{clubTeachers.length ? `Seño${clubTeachers.length > 1 ? 's' : ''}: ${clubTeachers.map((teacher) => teacher.name).join(' · ')}` : 'Seño pendiente de asignación'}</small></div></article> })}</div></section>
 }
 
 function PlayIcon() {
@@ -698,7 +710,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'teachers' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -730,6 +742,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
     }
   }, [channel])
   const active = live.skaters.find((skater) => skater.id === live.activeId)
+  const activeTeachers = active ? (live.teachers ?? []).filter((teacher) => teacher.club === active.club) : []
   const pending = live.skaters.filter((skater) => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))
   const countdown = useCountdown(live.eventDate, live.startTime)
   const breakCountdown = useRemainingUntil(live.breakEndsAt)
@@ -797,6 +810,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
                 {active.club} · {active.track}
               </p>
             )}
+            {activeTeachers.length > 0 && <div className="public-active-teacher">Seño: <strong>{activeTeachers.map((teacher) => teacher.name).join(' · ')}</strong></div>}
           </section>
           <div className="public-columns">
             <div>
@@ -826,6 +840,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
           ))}
         </>
       )}
+      <ParticipatingClubs clubs={live.clubs ?? []} teachers={live.teachers ?? []} skaters={live.skaters} />
       <div className="public-credit">
         Desarrollado por <strong>PLVM Soft</strong>
       </div>

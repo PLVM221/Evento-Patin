@@ -1,6 +1,12 @@
 export type SkaterStatus = 'PENDING' | 'READY' | 'SKATING' | 'FINISHED' | 'ABSENT' | 'POSTPONED'
 export type StageNumber = 1 | 2 | 3
 
+export interface Teacher {
+  id: string
+  name: string
+  club: string
+}
+
 export interface Skater {
   id: string
   number: number
@@ -34,6 +40,8 @@ export interface FestivalState {
   completedStages: StageNumber[]
   stageOrders: Partial<Record<StageNumber, string[]>>
   started: boolean
+  clubs: string[]
+  teachers: Teacher[]
   skaters: Skater[]
   activeId?: string
   elapsed: number

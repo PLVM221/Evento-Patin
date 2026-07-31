@@ -17,6 +17,8 @@ const restore = (): FestivalState => {
       completedStages: parsed.completedStages ?? (parsed.firstStageCompleted ? [1] : []),
       stageOrders: parsed.stageOrders ?? {},
       breakDurationMinutes: parsed.breakDurationMinutes ?? 20,
+      clubs: parsed.clubs ?? [...new Set((parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number]) => skater.club))],
+      teachers: parsed.teachers ?? [],
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageNumber: skater.stageNumber ?? 1,
@@ -143,7 +145,13 @@ export function useFestival() {
     update(current => ({ ...current, skaters: current.skaters.map(skater => skater.id === id ? { ...skater, ...values } : skater) }))
 
   const renameClub = (from: string, to: string) =>
-    update(current => ({ ...current, skaters: current.skaters.map(skater => skater.club === from ? { ...skater, club: to } : skater) }))
+    update(current => ({ ...current, clubs: current.clubs.map(club => club === from ? to : club), teachers: current.teachers.map(teacher => teacher.club === from ? { ...teacher, club: to } : teacher), skaters: current.skaters.map(skater => skater.club === from ? { ...skater, club: to } : skater) }))
+
+  const addClub = (name: string) => update(current => current.clubs.some(club => club.toLowerCase() === name.toLowerCase()) ? current : ({ ...current, clubs: [...current.clubs, name].sort() }))
+
+  const addTeacher = (name: string, club: string) => update(current => ({ ...current, teachers: [...current.teachers, { id: crypto.randomUUID(), name, club }] }))
+
+  const removeTeacher = (id: string) => update(current => ({ ...current, teachers: current.teachers.filter(teacher => teacher.id !== id) }))
 
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
     const ids = [...(current.stageOrders[stage] ?? current.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id))].filter(skaterId => skaterId !== id)
@@ -160,5 +168,5 @@ export function useFestival() {
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
+  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, addTeacher, removeTeacher, undo, canUndo: history.current.length > 0 }
 }

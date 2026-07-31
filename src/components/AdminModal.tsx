@@ -3,7 +3,7 @@ import { Headphones, Music2, Plus, Settings2, Users, X } from 'lucide-react'
 import type { FestivalState, Skater } from '../models'
 import { fullName } from '../models'
 
-type Tab = 'evento' | 'participantes' | 'clubes' | 'audios'
+type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'audios'
 
 interface Props {
   state: FestivalState
@@ -12,11 +12,14 @@ interface Props {
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
   onRenameClub: (from: string, to: string) => void
+  onAddClub: (name: string) => void
+  onAddTeacher: (name: string, club: string) => void
+  onRemoveTeacher: (id: string) => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub, onAddClub, onAddTeacher, onRemoveTeacher }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
-  const clubs = useMemo(() => [...new Set(state.skaters.map(skater => skater.club))].sort(), [state.skaters])
+  const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
   return (
     <div className="admin-backdrop">
@@ -25,13 +28,15 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
         <nav className="admin-tabs">
           <button className={tab === 'evento' ? 'selected' : ''} onClick={() => setTab('evento')}><Settings2 /> Evento</button>
           <button className={tab === 'participantes' ? 'selected' : ''} onClick={() => setTab('participantes')}><Users /> Patinadoras</button>
+          <button className={tab === 'senos' ? 'selected' : ''} onClick={() => setTab('senos')}><Users /> Seños</button>
           <button className={tab === 'clubes' ? 'selected' : ''} onClick={() => setTab('clubes')}><Users /> Clubes</button>
           <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>
         </nav>
         <div className="admin-content">
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} />}
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} />}
-          {tab === 'clubes' && <ClubAdmin clubs={clubs} onRename={onRenameClub} />}
+          {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
+          {tab === 'clubes' && <ClubAdmin clubs={clubs} onRename={onRenameClub} onAdd={onAddClub} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
       </section>
@@ -64,18 +69,25 @@ function SkaterAdmin({ state, onAdd, onUpdate }: { state: FestivalState; onAdd: 
       <input aria-label="Número" type="number" required value={form.number} onChange={event => setForm({ ...form, number: Number(event.target.value) })} />
       <input placeholder="Nombre" required value={form.firstName} onChange={event => setForm({ ...form, firstName: event.target.value })} />
       <input placeholder="Apellido" required value={form.lastName} onChange={event => setForm({ ...form, lastName: event.target.value })} />
-      <input placeholder="Club" required value={form.club} onChange={event => setForm({ ...form, club: event.target.value })} />
+      <select aria-label="Club" required value={form.club} onChange={event => setForm({ ...form, club: event.target.value })}><option value="">Seleccionar club</option>{state.clubs.map(club => <option key={club}>{club}</option>)}</select>
       <input placeholder="Coreografía / canción" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
       <select value={form.heat} onChange={event => setForm({ ...form, heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select>
       <select aria-label="Etapa" value={form.stageNumber} onChange={event => setForm({ ...form, stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select>
       <button><Plus /> Agregar</button>
     </form>
-    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><small>{skater.club}</small></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></div>)}</div>
+    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></div>)}</div>
   </div>
 }
 
-function ClubAdmin({ clubs, onRename }: { clubs: string[]; onRename: Props['onRenameClub'] }) {
-  return <div><div className="admin-intro"><h3>Clubes</h3><p>Renombrar actualiza todas sus patinadoras.</p></div><div className="club-list">{clubs.map(club => <ClubRow key={club} club={club} onRename={onRename} />)}</div></div>
+function TeacherAdmin({ state, onAdd, onRemove }: { state: FestivalState; onAdd: Props['onAddTeacher']; onRemove: Props['onRemoveTeacher'] }) {
+  const [name, setName] = useState('')
+  const [club, setClub] = useState(state.clubs[0] ?? '')
+  return <div><div className="admin-intro"><h3>Seños</h3><p>Cargá las profesoras y vinculalas con un club previamente registrado.</p></div><form className="teacher-add" onSubmit={event => { event.preventDefault(); if (name.trim() && club) { onAdd(name.trim(), club); setName('') } }}><input placeholder="Nombre y apellido de la seño" required value={name} onChange={event => setName(event.target.value)} /><select required value={club} onChange={event => setClub(event.target.value)}><option value="">Seleccionar club</option>{state.clubs.map(item => <option key={item}>{item}</option>)}</select><button><Plus /> Agregar</button></form><div className="teacher-list">{state.teachers.map(teacher => <div key={teacher.id}><span><strong>{teacher.name}</strong><small>{teacher.club}</small></span><button onClick={() => onRemove(teacher.id)}>Eliminar</button></div>)}</div></div>
+}
+
+function ClubAdmin({ clubs, onRename, onAdd }: { clubs: string[]; onRename: Props['onRenameClub']; onAdd: Props['onAddClub'] }) {
+  const [name, setName] = useState('')
+  return <div><div className="admin-intro"><h3>Clubes</h3><p>Cargá primero los clubes. Luego estarán disponibles en Patinadoras y Seños.</p></div><form className="club-add" onSubmit={event => { event.preventDefault(); if (name.trim()) { onAdd(name.trim()); setName('') } }}><input placeholder="Nombre del club" required value={name} onChange={event => setName(event.target.value)} /><button><Plus /> Agregar club</button></form><div className="club-list">{clubs.map(club => <ClubRow key={club} club={club} onRename={onRename} />)}</div></div>
 }
 
 function ClubRow({ club, onRename }: { club: string; onRename: Props['onRenameClub'] }) {
