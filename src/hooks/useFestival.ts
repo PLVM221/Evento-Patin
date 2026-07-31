@@ -42,13 +42,31 @@ export function useFestival() {
   const history = useRef<FestivalState[]>([])
   const initialState = useRef(state)
   const applyingRemote = useRef(false)
-  const ignoreRemoteUntil = useRef(0)
+  const pendingSave = useRef<FestivalState | null>(null)
+  const saving = useRef(false)
 
-  const persist = useCallback(async (next: FestivalState) => {
+  const persist = useCallback((next: FestivalState) => {
     if (readOnly) return
-    setDatabaseStatus('saving')
-    const { error } = await supabase.from('festival_state').upsert({ id: 'current', data: next, updated_at: new Date().toISOString() })
-    setDatabaseStatus(error ? 'error' : 'saved')
+    pendingSave.current = next
+    if (saving.current) return
+    const flush = async () => {
+      saving.current = true
+      setDatabaseStatus('saving')
+      while (pendingSave.current) {
+        const candidate = pendingSave.current
+        pendingSave.current = null
+        const { error } = await supabase.from('festival_state').upsert({ id: 'current', data: candidate, updated_at: new Date().toISOString() })
+        if (error) {
+          pendingSave.current = candidate
+          setDatabaseStatus('error')
+          saving.current = false
+          return
+        }
+      }
+      saving.current = false
+      setDatabaseStatus('saved')
+    }
+    void flush()
   }, [readOnly])
 
   useEffect(() => {
@@ -56,7 +74,7 @@ export function useFestival() {
     const load = async () => {
       const { data, error } = await supabase.from('festival_state').select('data').eq('id', 'current').maybeSingle()
       if (!active) return
-      if (!error && data?.data && Date.now() >= ignoreRemoteUntil.current) {
+      if (!error && data?.data && (readOnly || (!saving.current && !pendingSave.current))) {
         applyingRemote.current = true
         setState(normalize(data.data as Partial<FestivalState>))
       } else if (!error && !readOnly) {
@@ -65,15 +83,15 @@ export function useFestival() {
       setDatabaseStatus(error ? 'error' : 'saved')
     }
     void load()
-    const poll = window.setInterval(() => void load(), 5000)
+    const poll = readOnly ? window.setInterval(() => void load(), 5000) : undefined
     const channel = supabase.channel('festival-state-live').on('postgres_changes', { event: '*', schema: 'public', table: 'festival_state', filter: 'id=eq.current' }, payload => {
       const row = payload.new as { data?: Partial<FestivalState> }
-      if (row.data && Date.now() >= ignoreRemoteUntil.current) {
+      if (row.data && (readOnly || (!saving.current && !pendingSave.current))) {
         applyingRemote.current = true
         setState(normalize(row.data))
       }
     }).subscribe()
-    return () => { active = false; window.clearInterval(poll); void supabase.removeChannel(channel) }
+    return () => { active = false; if (poll) window.clearInterval(poll); void supabase.removeChannel(channel) }
   }, [readOnly])
 
   useEffect(() => {
@@ -85,7 +103,7 @@ export function useFestival() {
     setState(current => {
       history.current = [...history.current.slice(-19), current]
       const next = recipe(current)
-      if (next !== current) { ignoreRemoteUntil.current = Date.now() + 2000; void persist(next) }
+      if (next !== current) persist(next)
       return next
     })
   }, [persist])
@@ -222,7 +240,7 @@ export function useFestival() {
 
   const undo = () => {
     const previous = history.current.pop()
-    if (previous) { setState(previous); void persist(previous) }
+    if (previous) { setState(previous); persist(previous) }
   }
 
   return { state, databaseStatus, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo: history.current.length > 0 }
