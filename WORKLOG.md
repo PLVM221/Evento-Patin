@@ -43,3 +43,4 @@
 | 2026-07-31 | fix(bufet): sincronización pública separada para evitar límites de tamaño |
 | 2026-07-31 | chore(public): actualización automática del QR cada 5 segundos |
 | 2026-07-31 | fix(realtime): migración de instancia por cuota agotada y publicación solo ante cambios |
+| 2026-07-31 | style(operator): escudo junto al nombre y bloque EN PISTA centrado en QR |

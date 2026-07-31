@@ -438,12 +438,7 @@ function App() {
             {active ? (
               <>
                 <div className="bib">Nº {active.number}</div>
-                <div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div>
-                <h1>
-                  {active.firstName}
-                  <br />
-                  <strong>{active.lastName}</strong>
-                </h1>
+                <div className="active-identity"><div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div><h1>{active.firstName}<br /><strong>{active.lastName}</strong></h1></div>
                 <p className="club">{active.club}</p>
                 {activeTeachers.length > 0 && <div className="active-teacher"><small>SEÑO</small><strong>{activeTeachers.map((teacher) => teacher.name).join(' · ')}</strong></div>}
                 <div className="track">
@@ -813,7 +808,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
         </>
       ) : (
         <>
-          <section>
+          <section className="public-now">
             <small>EN PISTA</small>
             <div className="public-active-main">{active && <div className="public-active-logo">{live.clubLogos?.[active.club] ? <img src={live.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div>}<h2>{active ? fullName(active as Skater) : 'En preparación'}</h2></div>
             {active && (
