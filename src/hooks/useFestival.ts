@@ -37,6 +37,8 @@ const restore = (): FestivalState => {
 
 export function useFestival() {
   const [state, setState] = useState<FestivalState>(restore)
+  const [databaseStatus, setDatabaseStatus] = useState<'connecting' | 'saving' | 'saved' | 'error'>('connecting')
+  const readOnly = new URLSearchParams(window.location.search).has('publico')
   const history = useRef<FestivalState[]>([])
   const initialState = useRef(state)
   const cloudReady = useRef(false)
@@ -51,10 +53,11 @@ export function useFestival() {
       if (!error && data?.data) {
         applyingRemote.current = true
         setState(normalize(data.data as Partial<FestivalState>))
-      } else if (!error) {
+      } else if (!error && !readOnly) {
         await supabase.from('festival_state').upsert({ id: 'current', data: initialState.current, updated_at: new Date().toISOString() })
       }
-      cloudReady.current = !error
+      cloudReady.current = !error && !readOnly
+      setDatabaseStatus(error ? 'error' : 'saved')
     }
     void load()
     const poll = window.setInterval(() => void load(), 5000)
@@ -66,14 +69,15 @@ export function useFestival() {
       }
     }).subscribe()
     return () => { active = false; window.clearInterval(poll); void supabase.removeChannel(channel) }
-  }, [])
+  }, [readOnly])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     if (applyingRemote.current) { applyingRemote.current = false; return }
     if (!cloudReady.current) return
     window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(() => { void supabase.from('festival_state').upsert({ id: 'current', data: state, updated_at: new Date().toISOString() }) }, 400)
+    setDatabaseStatus('saving')
+    saveTimer.current = window.setTimeout(() => { void supabase.from('festival_state').upsert({ id: 'current', data: state, updated_at: new Date().toISOString() }).then(({ error }) => setDatabaseStatus(error ? 'error' : 'saved')) }, 400)
     return () => window.clearTimeout(saveTimer.current)
   }, [state])
 
@@ -219,5 +223,5 @@ export function useFestival() {
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo: history.current.length > 0 }
 }

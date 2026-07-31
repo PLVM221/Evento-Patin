@@ -39,7 +39,7 @@ function useRemainingUntil(target?: string) {
 }
 
 function App() {
-  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo } = useFestival()
+  const { state, databaseStatus, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -564,6 +564,7 @@ function App() {
           <i /> Guardado automático
         </span>
         <span>Último guardado: ahora</span>
+        <span className={`database-status ${databaseStatus}`}><i />{databaseStatus === 'saved' ? 'Guardado en base de datos' : databaseStatus === 'saving' ? 'Guardando en base de datos…' : databaseStatus === 'error' ? 'Error al guardar en base de datos' : 'Conectando con base de datos…'}</span>
         <span className="plvm-credit">
           Desarrollado por <strong>PLVM Soft</strong>
         </span>
