@@ -53,3 +53,4 @@
 | 2026-07-31 | fix(storage): QR solo lectura, estado visible de Supabase y botón de escudo legible |
 | 2026-07-31 | fix(storage): escritura directa a Supabase en cada acción del operador |
 | 2026-07-31 | ux(bufet): foco automático en Producto después de cada alta |
+| 2026-07-31 | fix(bufet): borrado persistente y precio positivo obligatorio |

@@ -42,6 +42,7 @@ export function useFestival() {
   const history = useRef<FestivalState[]>([])
   const initialState = useRef(state)
   const applyingRemote = useRef(false)
+  const ignoreRemoteUntil = useRef(0)
 
   const persist = useCallback(async (next: FestivalState) => {
     if (readOnly) return
@@ -55,7 +56,7 @@ export function useFestival() {
     const load = async () => {
       const { data, error } = await supabase.from('festival_state').select('data').eq('id', 'current').maybeSingle()
       if (!active) return
-      if (!error && data?.data) {
+      if (!error && data?.data && Date.now() >= ignoreRemoteUntil.current) {
         applyingRemote.current = true
         setState(normalize(data.data as Partial<FestivalState>))
       } else if (!error && !readOnly) {
@@ -67,7 +68,7 @@ export function useFestival() {
     const poll = window.setInterval(() => void load(), 5000)
     const channel = supabase.channel('festival-state-live').on('postgres_changes', { event: '*', schema: 'public', table: 'festival_state', filter: 'id=eq.current' }, payload => {
       const row = payload.new as { data?: Partial<FestivalState> }
-      if (row.data) {
+      if (row.data && Date.now() >= ignoreRemoteUntil.current) {
         applyingRemote.current = true
         setState(normalize(row.data))
       }
@@ -84,7 +85,7 @@ export function useFestival() {
     setState(current => {
       history.current = [...history.current.slice(-19), current]
       const next = recipe(current)
-      if (next !== current) void persist(next)
+      if (next !== current) { ignoreRemoteUntil.current = Date.now() + 2000; void persist(next) }
       return next
     })
   }, [persist])
