@@ -54,6 +54,7 @@ interface Props {
   onAddBuffetItem: (name: string, price: number) => void
   onUpdateBuffetItem: (id: string, values: Partial<FestivalState['buffetItems'][number]>) => void
   onRemoveBuffetItem: (id: string) => void
+  onSetPublicSectionVisibility: (section: 'showBuffet' | 'showRaffle', visible: boolean) => void
   onSetRaffleTicketPrice: (price: number) => void
   onAddRafflePrice: (quantity: number, price: number) => void
   onRemoveRafflePrice: (id: string) => void
@@ -66,7 +67,7 @@ interface Props {
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -85,6 +86,8 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>
         </nav>
         <div className="admin-content">
+          {tab === 'bufet' && <VisibilityToggle checked={state.showBuffet} title="Mostrar Bufet en la web del QR" onChange={visible => onSetPublicSectionVisibility('showBuffet', visible)} />}
+          {tab === 'sorteo' && <VisibilityToggle checked={state.showRaffle} title="Mostrar Sorteo en la web del QR" onChange={visible => onSetPublicSectionVisibility('showRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
@@ -97,6 +100,10 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
       </section>
     </div>
   )
+}
+
+function VisibilityToggle({ checked, title, onChange }: { checked: boolean; title: string; onChange: (visible: boolean) => void }) {
+  return <label className="public-visibility"><input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} /><span><strong>{title}</strong><small>Desmarcalo para ocultar el botón a los espectadores.</small></span></label>
 }
 
 function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave: Props['onUpdateEvent']; onClearAll: Props['onClearAll'] }) {

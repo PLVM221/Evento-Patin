@@ -39,7 +39,7 @@ function useRemainingUntil(target?: string) {
 }
 
 function App() {
-  const { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival()
+  const { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -575,7 +575,7 @@ function App() {
       </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
-      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetPublicSectionVisibility={setPublicSectionVisibility} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
           <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -708,7 +708,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -739,8 +739,8 @@ function PublicView({ state }: { state: PublicState }) {
       <div className="public-brand">
         <Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i>
       </div>
-      <button className="public-buffet-button" onClick={() => setBuffetOpen(true)}><ShoppingBasket /> Ver precios del bufet</button>
-      <button className="public-raffle-button" onClick={() => setRaffleOpen(true)}><Trophy /> Ver sorteo</button>
+      {live.showBuffet && <button className="public-buffet-button" onClick={() => setBuffetOpen(true)}><ShoppingBasket /> Ver precios del bufet</button>}
+      {live.showRaffle && <button className="public-raffle-button" onClick={() => setRaffleOpen(true)}><Trophy /> Ver sorteo</button>}
       <h1>{live.name}</h1>
       <div className="public-organizer">
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>

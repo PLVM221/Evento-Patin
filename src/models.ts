@@ -71,6 +71,8 @@ export interface FestivalState {
   clubLogos: Record<string, string>
   teachers: Teacher[]
   buffetItems: BuffetItem[]
+  showBuffet: boolean
+  showRaffle: boolean
   raffleTicketPrice: number
   rafflePrices: RafflePrice[]
   rafflePrizes: RafflePrize[]

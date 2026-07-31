@@ -64,3 +64,4 @@
 | 2026-07-31 | ux(admin): solapas visibles de Sorteo y Copias con restauración desde Supabase |
 | 2026-07-31 | feat(admin): eliminación de patinadoras y promociones múltiples para sorteo |
 | 2026-07-31 | feat(sorteo): número de orden configurable para cada premio |
+| 2026-07-31 | feat(public): visibilidad configurable de los botones Bufet y Sorteo |

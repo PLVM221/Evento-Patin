@@ -29,6 +29,8 @@ export const initialFestival: FestivalState = {
     { id: 'b2', name: 'Gaseosa', price: 2000 },
     { id: 'b3', name: 'Hamburguesa', price: 4500 },
   ],
+  showBuffet: true,
+  showRaffle: true,
   raffleTicketPrice: 0,
   rafflePrices: [],
   rafflePrizes: [],
