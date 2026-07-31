@@ -26,3 +26,4 @@
 | 16:34 | feat(soundboard): personalización real con carga, nombre, reproducción y eliminación |
 | 16:47 | feat(stage): configuración de 1/2/3 etapas, cierre por pasada e historial completo |
 | 16:55 | feat(export): descarga CSV con orden por etapa, patinadora, club y coreografía |
+| 2026-07-31 | feat: etapas separadas, clima/ubicación, mover por etapa, QR y vista pública |

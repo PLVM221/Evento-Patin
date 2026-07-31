@@ -21,6 +21,10 @@ export interface Skater {
 export interface FestivalState {
   name: string
   organizer: string
+  location: string
+  eventDate: string
+  startTime: string
+  countdownMinutes: number
   stageCount: StageNumber
   currentStage: StageNumber
   completedStages: StageNumber[]

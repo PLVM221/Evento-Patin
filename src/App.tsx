@@ -1,22 +1,34 @@
  'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, RefreshCcw, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
+import { Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
+import QRCode from 'qrcode'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
 import { AdminModal } from './components/AdminModal'
+import { WeatherCard } from './components/WeatherCard'
 import { useFestival } from './hooks/useFestival'
-import { formatTime, fullName, type Skater } from './models'
+import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber } from './models'
 
 function App() {
-  const { state, start, finishAndNext, move, setStatus, setVolume, reset, completeStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
   const [dark, setDark] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
+  const [qrImage, setQrImage] = useState('')
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const customSoundInput = useRef<HTMLInputElement>(null)
   const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
+  const [soundEditorOpen, setSoundEditorOpen] = useState(false)
+  const [soundButtons, setSoundButtons] = useState([
+    { id: 'applause', name: 'APLAUSOS', icon: '👏', file: 'aplausos.ogg', shortcut: 'F1', gain: .7 },
+    { id: 'strong', name: 'APLAUSOS FUERTES', icon: '👏👏', file: 'aplausos.ogg', shortcut: 'F2', gain: 1 },
+    { id: 'intro', name: 'PRESENTACIÓN', icon: '🎙️', file: 'locutor/presentacion.wav', shortcut: 'F3', gain: 1 },
+    { id: 'next', name: 'PRÓXIMA', icon: '🔔', file: 'locutor/proxima.wav', shortcut: 'F4', gain: 1 },
+    { id: 'congrats', name: 'FELICITACIONES', icon: '🎉', file: 'locutor/felicitaciones.wav', shortcut: 'F6', gain: 1 },
+  ])
   const active = state.skaters.find(skater => skater.id === state.activeId)
   const waiting = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
@@ -26,6 +38,9 @@ function App() {
   const stageName = `Etapa ${state.currentStage} de ${state.stageCount}`
   const hasNextStage = state.currentStage < state.stageCount
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
+  const publicUrl = `${window.location.origin}${window.location.pathname}?publico=1`
+
+  useEffect(() => { void QRCode.toDataURL(publicUrl, { width: 280, margin: 1 }).then(setQrImage) }, [publicUrl])
 
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
@@ -71,6 +86,8 @@ function App() {
     void player.play()
   }
 
+  const playSoundButton = (button: typeof soundButtons[number]) => button.file.startsWith('blob:') ? playCustomSound(button.file) : playEffect(button.file, button.gain)
+
   const downloadEventList = () => {
     const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
     const rows: Array<Array<string | number>> = [
@@ -96,6 +113,8 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  if (new URLSearchParams(window.location.search).has('publico')) return <PublicView state={state} />
+
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
       <header>
@@ -106,6 +125,7 @@ function App() {
           <button title="Pantalla completa" aria-label="Pantalla completa" onClick={() => void document.documentElement.requestFullscreen()}><Maximize2 /></button>
           <button title="Cambiar tema claro/oscuro" aria-label="Cambiar tema" onClick={() => setDark(value => !value)}><Moon /></button>
           <button title="Administrar evento, patinadoras, clubes y audios" aria-label="Administrar" onClick={() => setAdminOpen(true)}><Settings /></button>
+          <button title="QR para espectadores" aria-label="QR para espectadores" onClick={() => setQrOpen(true)}><QrCode /></button>
           <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}><RefreshCcw /><span>REINICIAR</span></button>
         </div>
       </header>
@@ -124,8 +144,11 @@ function App() {
           </div>
         </section>
 
+        <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
+
         {!state.started && !currentStageCompleted && <button className="start-banner" onClick={() => window.confirm(`¿Iniciar etapa ${state.currentStage} desde la participante preparada?`) && start()}><span><PlayIcon /> INICIAR ETAPA {state.currentStage}</span><small>La música quedará preparada. No comenzará automáticamente.</small></button>}
-        {!currentStageCompleted && <button className="stage-transition" onClick={() => window.confirm(`¿Finalizar etapa ${state.currentStage}${hasNextStage ? ` e iniciar etapa ${state.currentStage + 1}` : ' y cerrar todas las pasadas'}? Se guardará el resultado de cada patinadora.`) && completeStage()}><RefreshCcw /><span><strong>{hasNextStage ? `FINALIZAR ETAPA ${state.currentStage} E INICIAR ETAPA ${state.currentStage + 1}` : `FINALIZAR ETAPA ${state.currentStage}`}</strong><small>Guarda resultados de esta pasada {hasNextStage ? 'y prepara la siguiente' : 'y cierra el festival'}</small></span></button>}
+        {!currentStageCompleted && <button className="stage-transition" onClick={() => window.confirm(`¿Finalizar etapa ${state.currentStage}? Se guardará el resultado de cada patinadora.`) && completeStage()}><Check /><span><strong>FINALIZAR ETAPA {state.currentStage}</strong><small>Guarda resultados de esta pasada sin iniciar la siguiente</small></span></button>}
+        {currentStageCompleted && hasNextStage && <button className="stage-transition start-next-stage" onClick={() => window.confirm(`¿Preparar etapa ${state.currentStage + 1}?`) && startNextStage()}><RefreshCcw /><span><strong>INICIAR ETAPA {state.currentStage + 1}</strong><small>Podés iniciarla cuando quieras</small></span></button>}
         {state.completedStages.length > 0 && <div className="stage-complete"><Check /> {state.completedStages.map(stage => `Etapa ${stage} finalizada`).join(' · ')} · resultados guardados en el listado</div>}
 
         <div className="live-grid">
@@ -153,13 +176,9 @@ function App() {
         </div>
 
         <section className="soundboard">
-          <div className="sound-title"><span><Mic2 /> PANEL DEL LOCUTOR</span><label><Volume2 /><input type="range" min="0" max="100" value={state.effectsVolume} onChange={event => setVolume('effectsVolume', Number(event.target.value))} /><b>{state.effectsVolume}%</b></label></div>
+          <div className="sound-title"><span><Mic2 /> PANEL DEL LOCUTOR <button className="manage-sounds" onClick={() => setSoundEditorOpen(true)}>Administrar botones</button></span><label><Volume2 /><input type="range" min="0" max="100" value={state.effectsVolume} onChange={event => setVolume('effectsVolume', Number(event.target.value))} /><b>{state.effectsVolume}%</b></label></div>
           <div className="sound-buttons">
-            <button onClick={() => playEffect('aplausos.ogg', .7)}><span>👏</span><strong>APLAUSOS</strong><kbd>F1</kbd></button>
-            <button onClick={() => playEffect('aplausos.ogg')}><span>👏👏</span><strong>APLAUSOS FUERTES</strong><kbd>F2</kbd></button>
-            <button onClick={() => playEffect('locutor/presentacion.wav')}><Mic2 /><strong>PRESENTACIÓN</strong><kbd>F3</kbd></button>
-            <button onClick={() => playEffect('locutor/proxima.wav')}><Bell /><strong>PRÓXIMA</strong><kbd>F4</kbd></button>
-            <button onClick={() => playEffect('locutor/felicitaciones.wav')}><span>🎉</span><strong>FELICITACIONES</strong><kbd>F6</kbd></button>
+            {soundButtons.map(button => <button key={button.id} onClick={() => playSoundButton(button)}><span>{button.icon}</span><strong>{button.name}</strong><kbd>{button.shortcut}</kbd></button>)}
             {customSounds.map(sound => <button className="custom-sound" key={sound.id} onClick={() => playCustomSound(sound.url)}><Volume2 /><strong>{sound.name}</strong><span className="remove-sound" title="Eliminar" onClick={event => { event.stopPropagation(); URL.revokeObjectURL(sound.url); setCustomSounds(current => current.filter(item => item.id !== sound.id)) }}>×</span></button>)}
             <button className="add-sound" onClick={() => customSoundInput.current?.click()}>＋ Personalizar</button>
             <input ref={customSoundInput} className="hidden-file" type="file" accept="audio/*" onChange={event => { addCustomSound(event.target.files?.[0]); event.target.value = '' }} />
@@ -172,14 +191,30 @@ function App() {
 
       <footer><span><i /> Guardado automático</span><span>Último guardado: ahora</span><button onClick={undo} disabled={!canUndo}><Undo2 /> DESHACER ÚLTIMA ACCIÓN</button><span className="footer-time">JUE 30 JUL · 14:32</span></footer>
 
-      {selected && <div className="modal-backdrop" onMouseDown={() => setSelected(undefined)}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setSelected(undefined)}>×</button><small>PARTICIPANTE Nº {selected.number}</small><h2>{fullName(selected)}</h2><p>{selected.club} · {selected.category}</p><div className="modal-track">♫ {selected.track} · {formatTime(selected.duration)}</div><div className="modal-actions">{selected.status === 'ABSENT' ? <button onClick={() => { setStatus(selected.id, 'PENDING'); setSelected(undefined) }}>Reactivar</button> : <button onClick={() => { setStatus(selected.id, 'ABSENT'); setSelected(undefined) }}>No se presenta</button>}<button onClick={() => { setStatus(selected.id, 'POSTPONED'); setSelected(undefined) }}>Posponer</button></div></div></div>}
+      {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
       {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} />}
+      {qrOpen && <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}><div className="modal qr-modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setQrOpen(false)}>×</button><small>PANTALLA PARA ESPECTADORES</small><h2>Escaneá para seguir el evento</h2>{qrImage && <img src={qrImage} alt="QR pantalla pública" />}<a href={publicUrl} target="_blank">{publicUrl}</a></div></div>}
+      {soundEditorOpen && <div className="modal-backdrop" onMouseDown={() => setSoundEditorOpen(false)}><div className="modal sound-editor" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setSoundEditorOpen(false)}>×</button><small>PANEL DEL LOCUTOR</small><h2>Administrar botones</h2>{soundButtons.map(button => <div className="sound-edit-row" key={button.id}><input className="icon-input" aria-label="Icono" value={button.icon} onChange={event => setSoundButtons(items => items.map(item => item.id === button.id ? { ...item, icon: event.target.value } : item))} /><input aria-label="Nombre" value={button.name} onChange={event => setSoundButtons(items => items.map(item => item.id === button.id ? { ...item, name: event.target.value } : item))} /><label className="file-btn">Cambiar audio<input type="file" accept="audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) setSoundButtons(items => items.map(item => item.id === button.id ? { ...item, file: URL.createObjectURL(file) } : item)) }} /></label></div>)}</div></div>}
     </div>
   )
 }
 
 function PlayIcon() {
   return <span className="play-triangle">▶</span>
+}
+
+function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Skater; state: FestivalState; onClose: () => void; onStatus: (id: string, status: SkaterStatus) => void; onMove: (id: string, stage: StageNumber, position: number) => void }) {
+  const [stage, setStage] = useState<StageNumber>(state.currentStage)
+  const [position, setPosition] = useState(state.skaters.findIndex(item => item.id === skater.id) + 1)
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><small>PARTICIPANTE Nº {skater.number}</small><h2>{fullName(skater)}</h2><p>{skater.club} · {skater.category}</p><div className="modal-track">♫ {skater.track} · {formatTime(skater.duration)}</div><div className="move-position"><label>Etapa<select value={stage} onChange={event => setStage(Number(event.target.value) as StageNumber)}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></label><label>Posición<input type="number" min="1" max={state.skaters.length} value={position} onChange={event => setPosition(Number(event.target.value))} /></label><button onClick={() => { onMove(skater.id, stage, position); onClose() }}>Mover</button></div><div className="modal-actions">{skater.status === 'ABSENT' ? <button onClick={() => { onStatus(skater.id, 'PENDING'); onClose() }}>Reactivar</button> : <button onClick={() => { onStatus(skater.id, 'ABSENT'); onClose() }}>No se presenta</button>}<button onClick={() => { onStatus(skater.id, 'POSTPONED'); onClose() }}>Posponer</button></div></div></div>
+}
+
+function PublicView({ state }: { state: FestivalState }) {
+  const active = state.skaters.find(skater => skater.id === state.activeId)
+  const pending = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'READY')
+  const eventAt = new Date(`${state.eventDate}T${state.startTime}:00`).getTime()
+  const minutes = Math.max(0, Math.ceil((eventAt - Date.now()) / 60000))
+  return <main className="public-view"><div className="public-brand"><Sparkles /> PISTA EN VIVO</div><h1>{state.name}</h1><p>{state.location} · Etapa {state.currentStage} de {state.stageCount}</p>{!state.started && <div className="public-countdown">Comienza en <strong>{minutes} minutos</strong></div>}<section><small>EN PISTA</small><h2>{active ? fullName(active) : 'En preparación'}</h2>{active && <p>{active.club} · {active.track}</p>}</section><div className="public-columns"><div><small>A CONTINUACIÓN</small><h3>{pending[0] ? fullName(pending[0]) : '—'}</h3><p>{pending[0]?.club}</p></div><div><small>YA PASARON</small><strong>{state.skaters.filter(skater => skater.status === 'FINISHED').length}</strong></div><div><small>RESTANTES</small><strong>{pending.length}</strong></div></div><h3 className="public-list-title">Próximas patinadoras</h3>{pending.slice(1, 8).map((skater, index) => <div className="public-row" key={skater.id}><b>{index + 2}</b><span>{fullName(skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div>)}</main>
 }
 
 export default App
