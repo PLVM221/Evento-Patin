@@ -36,3 +36,4 @@
 | 2026-07-31 | feat(clubes): escudos opcionales, iniciales de respaldo y sección Clubes invitados al pie |
 | 2026-07-31 | fix(clubes): organizador separado de invitados con escudo y tarjeta destacada |
 | 2026-07-31 | brand: firma PLVM Soft incorporada a la marca del encabezado |
+| 2026-07-31 | feat(public): fichas navegables de clubes y menú de bufet administrable |

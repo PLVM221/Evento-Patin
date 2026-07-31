@@ -21,6 +21,7 @@ const restore = (): FestivalState => {
       clubs: parsed.clubs ?? [...new Set((parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number]) => skater.club))],
       clubLogos: parsed.clubLogos ?? {},
       teachers: parsed.teachers ?? [],
+      buffetItems: parsed.buffetItems ?? [],
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageNumber: skater.stageNumber ?? 1,
@@ -157,6 +158,12 @@ export function useFestival() {
 
   const removeTeacher = (id: string) => update(current => ({ ...current, teachers: current.teachers.filter(teacher => teacher.id !== id) }))
 
+  const addBuffetItem = (name: string, price: number) => update(current => ({ ...current, buffetItems: [...current.buffetItems, { id: crypto.randomUUID(), name, price }] }))
+
+  const updateBuffetItem = (id: string, values: Partial<FestivalState['buffetItems'][number]>) => update(current => ({ ...current, buffetItems: current.buffetItems.map(item => item.id === id ? { ...item, ...values } : item) }))
+
+  const removeBuffetItem = (id: string) => update(current => ({ ...current, buffetItems: current.buffetItems.filter(item => item.id !== id) }))
+
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
     const ids = [...(current.stageOrders[stage] ?? current.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id))].filter(skaterId => skaterId !== id)
     ids.splice(Math.max(0, Math.min(ids.length, position - 1)), 0, id)
@@ -172,5 +179,5 @@ export function useFestival() {
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, undo, canUndo: history.current.length > 0 }
+  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, undo, canUndo: history.current.length > 0 }
 }

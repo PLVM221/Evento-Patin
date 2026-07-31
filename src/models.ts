@@ -7,6 +7,12 @@ export interface Teacher {
   club: string
 }
 
+export interface BuffetItem {
+  id: string
+  name: string
+  price: number
+}
+
 export interface Skater {
   id: string
   number: number
@@ -44,6 +50,7 @@ export interface FestivalState {
   clubs: string[]
   clubLogos: Record<string, string>
   teachers: Teacher[]
+  buffetItems: BuffetItem[]
   skaters: Skater[]
   activeId?: string
   elapsed: number

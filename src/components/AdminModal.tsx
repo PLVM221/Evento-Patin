@@ -1,9 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Headphones, Music2, Plus, Settings2, Users, X } from 'lucide-react'
+import { Headphones, Music2, Plus, Settings2, ShoppingBasket, Users, X } from 'lucide-react'
 import type { FestivalState, Skater } from '../models'
 import { fullName } from '../models'
 
-type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'audios'
+type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'audios'
 
 interface Props {
   state: FestivalState
@@ -16,9 +16,12 @@ interface Props {
   onUpdateClubLogo: (club: string, logo: string) => void
   onAddTeacher: (name: string, club: string) => void
   onRemoveTeacher: (id: string) => void
+  onAddBuffetItem: (name: string, price: number) => void
+  onUpdateBuffetItem: (id: string, values: Partial<FestivalState['buffetItems'][number]>) => void
+  onRemoveBuffetItem: (id: string) => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -31,6 +34,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           <button className={tab === 'participantes' ? 'selected' : ''} onClick={() => setTab('participantes')}><Users /> Patinadoras</button>
           <button className={tab === 'senos' ? 'selected' : ''} onClick={() => setTab('senos')}><Users /> Seños</button>
           <button className={tab === 'clubes' ? 'selected' : ''} onClick={() => setTab('clubes')}><Users /> Clubes</button>
+          <button className={tab === 'bufet' ? 'selected' : ''} onClick={() => setTab('bufet')}><ShoppingBasket /> Bufet</button>
           <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>
         </nav>
         <div className="admin-content">
@@ -38,6 +42,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onLogo={onUpdateClubLogo} />}
+          {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
       </section>
@@ -95,6 +100,12 @@ function ClubRow({ club, logo, onRename, onLogo }: { club: string; logo?: string
   const [name, setName] = useState(club)
   const initials = club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()
   return <div className="club-admin-row"><div className="club-logo-preview">{logo ? <img src={logo} alt={`Escudo de ${club}`} /> : initials}</div><input value={name} onChange={event => setName(event.target.value)} /><label className="file-btn">{logo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => onLogo(club, String(reader.result)); reader.readAsDataURL(file) }} /></label><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button></div>
+}
+
+function BuffetAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddBuffetItem']; onUpdate: Props['onUpdateBuffetItem']; onRemove: Props['onRemoveBuffetItem'] }) {
+  const [name, setName] = useState('')
+  const [price, setPrice] = useState(0)
+  return <div><div className="admin-intro"><h3>Bufet</h3><p>Cargá los productos y precios que verán los espectadores desde el QR.</p></div><form className="buffet-add" onSubmit={event => { event.preventDefault(); if (name.trim() && price >= 0) { onAdd(name.trim(), price); setName(''); setPrice(0) } }}><input placeholder="Producto" required value={name} onChange={event => setName(event.target.value)} /><input aria-label="Precio" type="number" min="0" step="1" required value={price} onChange={event => setPrice(Number(event.target.value))} /><button><Plus /> Agregar</button></form><div className="buffet-admin-list">{state.buffetItems.map(item => <div key={item.id}><input value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><label>$ <input type="number" min="0" value={item.price} onChange={event => onUpdate(item.id, { price: Number(event.target.value) })} /></label><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
 }
 
 function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props['onUpdateSkater'] }) {

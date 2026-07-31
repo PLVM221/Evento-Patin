@@ -23,6 +23,11 @@ export const initialFestival: FestivalState = {
     { id: 't4', name: 'Natalia Silva', club: 'Estrella del Sur' },
     { id: 't5', name: 'Paula Méndez', club: 'Unión Central' },
   ],
+  buffetItems: [
+    { id: 'b1', name: 'Agua mineral', price: 1500 },
+    { id: 'b2', name: 'Gaseosa', price: 2000 },
+    { id: 'b3', name: 'Hamburguesa', price: 4500 },
+  ],
   activeId: '3',
   elapsed: 137,
   musicVolume: 90,
