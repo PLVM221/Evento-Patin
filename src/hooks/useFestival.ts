@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import type { FestivalState, SavedEvent, SkaterStatus, StageNumber } from '../models'
 
 const STORAGE_KEY = 'pista-festival-state-v1'
+const OFFLINE_ENABLED_KEY = 'pista-offline-enabled-v1'
+const OFFLINE_DIRTY_KEY = 'pista-offline-dirty-v1'
 
 const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStageCompleted?: boolean }): FestivalState => ({
       ...initialFestival,
@@ -45,7 +47,8 @@ const restore = (): FestivalState => {
 
 export function useFestival() {
   const [state, setState] = useState<FestivalState>(restore)
-  const [databaseStatus, setDatabaseStatus] = useState<'connecting' | 'saving' | 'saved' | 'error'>('connecting')
+  const [databaseStatus, setDatabaseStatus] = useState<'connecting' | 'saving' | 'saved' | 'offline' | 'error'>(navigator.onLine ? 'connecting' : 'offline')
+  const [offlineEnabled, setOfflineEnabled] = useState(() => localStorage.getItem(OFFLINE_ENABLED_KEY) === 'true')
   const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([])
   const readOnly = new URLSearchParams(window.location.search).has('publico')
   const history = useRef<FestivalState[]>([])
@@ -63,6 +66,11 @@ export function useFestival() {
   const persist = useCallback((next: FestivalState) => {
     if (readOnly) return
     pendingSave.current = next
+    if (!navigator.onLine && offlineEnabled) {
+      localStorage.setItem(OFFLINE_DIRTY_KEY, 'true')
+      setDatabaseStatus('offline')
+      return
+    }
     if (saving.current) return
     const flush = async () => {
       saving.current = true
@@ -73,20 +81,43 @@ export function useFestival() {
         const { error } = await supabase.from('festival_state').upsert({ id: 'current', data: candidate, updated_at: new Date().toISOString() })
         if (error) {
           pendingSave.current = candidate
+          if (offlineEnabled) localStorage.setItem(OFFLINE_DIRTY_KEY, 'true')
           setDatabaseStatus('error')
           saving.current = false
           return
         }
       }
       saving.current = false
+      localStorage.removeItem(OFFLINE_DIRTY_KEY)
       setDatabaseStatus('saved')
     }
     void flush()
-  }, [readOnly])
+  }, [readOnly, offlineEnabled])
+
+  const setOfflineMode = useCallback(async (enabled: boolean) => {
+    setOfflineEnabled(enabled)
+    localStorage.setItem(OFFLINE_ENABLED_KEY, String(enabled))
+    if (!('serviceWorker' in navigator)) return
+    if (enabled) {
+      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}offline-sw.js`, { scope: import.meta.env.BASE_URL })
+    } else {
+      const registrations = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(registrations.filter(item => item.scope.includes(import.meta.env.BASE_URL)).map(item => item.unregister()))
+      await caches.delete('pista-offline-v1')
+      localStorage.removeItem(OFFLINE_DIRTY_KEY)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
     const load = async () => {
+      if (!readOnly && offlineEnabled && localStorage.getItem(OFFLINE_DIRTY_KEY) === 'true' && navigator.onLine) {
+        const local = localStorage.getItem(STORAGE_KEY)
+        if (local) {
+          const { error: syncError } = await supabase.from('festival_state').upsert({ id: 'current', data: normalize(JSON.parse(local)), updated_at: new Date().toISOString() })
+          if (!syncError) { localStorage.removeItem(OFFLINE_DIRTY_KEY); pendingSave.current = null }
+        }
+      }
       const { data, error } = await supabase.from('festival_state').select('data').eq('id', 'current').maybeSingle()
       if (!active) return
       if (!error && data?.data && (readOnly || (!saving.current && !pendingSave.current))) {
@@ -95,7 +126,7 @@ export function useFestival() {
       } else if (!error && !readOnly) {
         await supabase.from('festival_state').upsert({ id: 'current', data: initialState.current, updated_at: new Date().toISOString() })
       }
-      setDatabaseStatus(error ? 'error' : 'saved')
+      setDatabaseStatus(!navigator.onLine && offlineEnabled ? 'offline' : error ? 'error' : 'saved')
     }
     void load()
     void loadSavedEvents()
@@ -108,11 +139,14 @@ export function useFestival() {
       }
     }).subscribe()
     const resume = () => { if (document.visibilityState === 'visible') void load() }
+    const reconnect = () => void load()
     document.addEventListener('visibilitychange', resume)
     window.addEventListener('pageshow', resume)
     window.addEventListener('focus', resume)
-    return () => { active = false; if (poll) window.clearInterval(poll); document.removeEventListener('visibilitychange', resume); window.removeEventListener('pageshow', resume); window.removeEventListener('focus', resume); void supabase.removeChannel(channel) }
-  }, [readOnly, loadSavedEvents])
+    window.addEventListener('online', reconnect)
+    window.addEventListener('offline', reconnect)
+    return () => { active = false; if (poll) window.clearInterval(poll); document.removeEventListener('visibilitychange', resume); window.removeEventListener('pageshow', resume); window.removeEventListener('focus', resume); window.removeEventListener('online', reconnect); window.removeEventListener('offline', reconnect); void supabase.removeChannel(channel) }
+  }, [readOnly, loadSavedEvents, offlineEnabled])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
@@ -303,5 +337,5 @@ export function useFestival() {
     if (previous) { setState(previous); persist(previous) }
   }
 
-  return { state, databaseStatus, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
 }

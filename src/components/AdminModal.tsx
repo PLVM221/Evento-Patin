@@ -3,7 +3,7 @@ import { Headphones, Music2, Plus, Save, Settings2, ShoppingBasket, Trophy, User
 import type { FestivalState, SavedEvent, Skater } from '../models'
 import { fullName } from '../models'
 
-type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'copias' | 'audios'
+type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'copias' | 'offline' | 'audios'
 
 const optimizeImage = (file: File, done: (value: string) => void) => {
   const reader = new FileReader()
@@ -65,10 +65,12 @@ interface Props {
   onSaveEvent: () => Promise<boolean>
   onRestoreEvent: (id: string) => Promise<boolean>
   onDeleteSavedEvent: (id: string) => Promise<boolean>
+  offlineEnabled: boolean
+  onSetOfflineMode: (enabled: boolean) => Promise<void>
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -84,6 +86,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           <button className={tab === 'bufet' ? 'selected' : ''} onClick={() => setTab('bufet')}><ShoppingBasket /> Bufet</button>
           <button className={tab === 'sorteo' ? 'selected' : ''} onClick={() => setTab('sorteo')}><Trophy /> Sorteo</button>
           <button className={tab === 'copias' ? 'selected' : ''} onClick={() => setTab('copias')}><Save /> Copias</button>
+          <button className={tab === 'offline' ? 'selected' : ''} onClick={() => setTab('offline')}><Save /> Sin conexión</button>
           <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>
         </nav>
         <div className="admin-content">
@@ -98,6 +101,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
           {tab === 'sorteo' && <RaffleAdmin state={state} onAddPrice={onAddRafflePrice} onRemovePrice={onRemoveRafflePrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
           {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} onDelete={onDeleteSavedEvent} />}
+          {tab === 'offline' && <OfflineAdmin enabled={offlineEnabled} onChange={onSetOfflineMode} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
       </section>
@@ -176,6 +180,12 @@ function RaffleAdmin({ state, onAddPrice, onRemovePrice, onAdd, onUpdate, onRemo
   const [price, setPrice] = useState(0)
   const [order, setOrder] = useState(state.rafflePrizes.length + 1)
   return <div><div className="admin-intro"><h3>Sorteo</h3><p>Configurá promociones, premios y publicá cada número ganador.</p></div><form className="raffle-price-add" onSubmit={event => { event.preventDefault(); if (quantity > 0 && price > 0) { onAddPrice(quantity, price); setPrice(0) } }}><label>Cantidad de números<select value={quantity} onChange={event => setQuantity(Number(event.target.value))}>{Array.from({ length: 20 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? 'números' : 'número'}</option>)}</select></label><label>Precio total<input type="number" min="1" required value={price || ''} onChange={event => setPrice(Number(event.target.value))} /></label><button>Guardar valor</button></form><div className="raffle-price-list">{state.rafflePrices.map(item => <div key={item.id}><strong>{item.quantity} {item.quantity === 1 ? 'número' : 'números'}</strong><span>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</span><button onClick={() => onRemovePrice(item.id)}>Eliminar</button></div>)}</div><form className="raffle-add" onSubmit={event => { event.preventDefault(); if (prize.trim() && order > 0) { onAdd(prize.trim(), order); setPrize(''); setOrder(current => current + 1) } }}><input className="prize-order" aria-label="Número de premio" type="number" min="1" required value={order} onChange={event => setOrder(Number(event.target.value))} /><input placeholder="Premio (ej.: Canasta de productos)" required value={prize} onChange={event => setPrize(event.target.value)} /><button><Plus /> Agregar premio</button></form><div className="raffle-admin-list">{state.rafflePrizes.map(item => <div key={item.id}><input aria-label="Número de premio" type="number" min="1" value={item.order} onChange={event => onUpdate(item.id, { order: Number(event.target.value) })} /><input aria-label={`Premio ${item.order}`} value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><input aria-label={`Número ganador del premio ${item.order}`} placeholder="N.º ganador" value={item.winningNumber} onChange={event => onUpdate(item.id, { winningNumber: event.target.value })} /><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
+}
+
+function OfflineAdmin({ enabled, onChange }: { enabled: boolean; onChange: Props['onSetOfflineMode'] }) {
+  const [working, setWorking] = useState(false)
+  const toggle = async () => { setWorking(true); try { await onChange(!enabled) } finally { setWorking(false) } }
+  return <div><div className="admin-intro"><h3>Trabajo sin conexión</h3><p>Prepará este equipo para que el festival continúe aunque se corte Internet.</p></div><section className={`offline-card ${enabled ? 'enabled' : ''}`}><Save /><div><small>{enabled ? 'PROTECCIÓN ACTIVADA' : 'OPCIONAL'}</small><h4>{enabled ? 'Este evento está disponible localmente' : 'Descargar evento en este equipo'}</h4><p>Mientras haya Internet se trabaja normalmente con Supabase. Si se corta, los cambios quedan guardados aquí y se sincronizan automáticamente al regresar la conexión.</p></div><button disabled={working} onClick={() => void toggle()}>{working ? 'Preparando…' : enabled ? 'Desactivar modo local' : 'Descargar evento localmente'}</button></section><div className="offline-notes"><strong>Funcionamiento automático</strong><span>✓ No cambia la forma de usar el panel.</span><span>✓ Conserva las acciones realizadas durante el corte.</span><span>✓ Sincroniza nuevamente cuando vuelve Internet.</span><span>✓ La activación se aplica solamente a este equipo y navegador.</span></div></div>
 }
 
 function BackupAdmin({ state, savedEvents, onSave, onRestore, onDelete }: { state: FestivalState; savedEvents: SavedEvent[]; onSave: Props['onSaveEvent']; onRestore: Props['onRestoreEvent']; onDelete: Props['onDeleteSavedEvent'] }) {
