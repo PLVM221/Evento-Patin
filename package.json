@@ -9,6 +9,7 @@
     "build:pages": "tsc -b && vite build --config vite.github.config.ts",
     "postbuild": "node scripts/copy-hosting.mjs",
     "lint": "oxlint",
+    "test": "node --test scripts/domain.test.mjs",
     "start": "vinext start"
   },
   "dependencies": {

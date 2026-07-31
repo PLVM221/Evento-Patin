@@ -1,6 +1,8 @@
 import type { FestivalState } from '../models'
 
 export const initialFestival: FestivalState = {
+  schemaVersion: 2,
+  revision: 0,
   name: 'Festival Provincial 2026',
   organizer: 'Club Atlético Provincial',
   organizerLogo: '',
@@ -40,6 +42,7 @@ export const initialFestival: FestivalState = {
   elapsed: 137,
   musicVolume: 90,
   effectsVolume: 78,
+  auditLog: [],
   skaters: [
     { id: '1', number: 21, firstName: 'Martina', lastName: 'López', club: 'Club Horizonte', category: 'Inicial B', track: 'A Thousand Years', duration: 201, heat: 'Tanda 1', stageNumber: 1, status: 'FINISHED' },
     { id: '2', number: 22, firstName: 'Julieta', lastName: 'García', club: 'Estrella del Sur', category: 'Inicial B', track: 'Lovely', duration: 194, heat: 'Tanda 1', stageNumber: 1, status: 'FINISHED' },

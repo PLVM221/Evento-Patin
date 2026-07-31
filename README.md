@@ -1,6 +1,6 @@
 # Pista
 
-Panel local para conducción de festivales de patín artístico.
+Panel seguro, online/offline, para conducción de festivales de patín artístico.
 
 ## Estado
 
@@ -15,9 +15,15 @@ MVP web ejecutable con:
 - soundboard visual;
 - historial con deshacer;
 - guardado automático local;
+- acceso autenticado y datos aislados por operador;
+- sincronización con detección y resolución de conflictos;
+- canciones persistentes en IndexedDB y control previo de audios;
+- estimación dinámica del horario de finalización;
+- bloqueo de suspensión de pantalla durante la competencia;
+- importación CSV, backups JSON y auditoría operativa;
 - diseño responsive.
 
-La integración Tauri, SQLite y audio nativo todavía no está implementada. El reproductor actual modela el flujo operativo, pero requiere conectar archivos reales.
+Los audios se conservan solamente en el navegador donde se seleccionaron. Para operar desde otro equipo hay que volver a asociarlos y completar el control previo.
 
 ## Desarrollo
 
@@ -33,6 +39,7 @@ Abrir la URL indicada por Vite, normalmente `http://localhost:5173`.
 ```bash
 npm run build
 npm run lint
+npm test
 ```
 
 ## Arquitectura
@@ -45,4 +52,26 @@ src/
   models.ts    tipos del dominio
 ```
 
-Próxima fase: capa Tauri + migraciones SQLite + repositorios locales, reemplazando `data/demo.ts` y `localStorage`.
+## Configuración segura
+
+1. Copiar `.env.example` como `.env.local` y completar las variables de Supabase.
+2. Aplicar, en orden, las migraciones de `supabase/migrations`.
+3. Crear las cuentas de los operadores desde Supabase Authentication.
+4. No publicar el panel antes de aplicar `20260731_secure_event_ownership.sql`: esa migración elimina el acceso anónimo a los datos privados.
+
+La clave publicable de Supabase puede estar en el frontend; la protección real está en Authentication y las políticas RLS. No usar nunca una `service_role` en variables `VITE_*`.
+
+## Importación de participantes
+
+Desde `Administrar → Patinadoras → Importar CSV`. El archivo usa `;` y esta cabecera:
+
+```text
+numero;nombre;apellido;club;categoria;etapa;cancion;duracion_segundos;tanda
+```
+
+## Recuperación
+
+- Las copias de Supabase están aisladas por cuenta.
+- Las copias JSON permiten trasladar el evento manualmente.
+- `backups/evento-patin-pre-mejoras-20260731.zip` contiene el estado anterior a esta actualización y está ignorado por Git.
+- Ante un conflicto entre equipos, el pie del panel permite conservar la versión local o recuperar la de la nube.

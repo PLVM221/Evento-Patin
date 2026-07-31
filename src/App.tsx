@@ -7,10 +7,14 @@ import { Player } from './components/Player'
 import { Queue } from './components/Queue'
 import { AdminModal } from './components/AdminModal'
 import { WeatherCard } from './components/WeatherCard'
+import { AuthGate } from './components/AuthGate'
 import { useFestival } from './hooks/useFestival'
+import { audioPreflight, estimateFinish } from './lib/operations.mjs'
+import { supabase } from './lib/supabase'
+import { createId } from './lib/id'
 import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
 
-const REALTIME_BASE = 'https://ntfy.envs.net'
+const REALTIME_BASE = import.meta.env.VITE_REALTIME_RELAY_URL || 'https://ntfy.envs.net'
 
 function useCountdown(eventDate: string, startTime: string) {
   const [now, setNow] = useState(Date.now())
@@ -38,8 +42,8 @@ function useRemainingUntil(target?: string) {
   return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}:${String(totalSeconds % 60).padStart(2, '0')}`
 }
 
-function App() {
-  const { state, databaseStatus, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival()
+function OperatorApp({ userId }: { userId: string }) {
+  const { state, databaseStatus, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival(userId)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -49,7 +53,7 @@ function App() {
   const [liveChannel] = useState(() => {
     const saved = localStorage.getItem('pista-live-channel')
     if (saved) return saved
-    const created = `pista-${crypto.randomUUID()}`
+    const created = `pista-${createId()}`
     localStorage.setItem('pista-live-channel', created)
     return created
   })
@@ -111,12 +115,22 @@ function App() {
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
   const countdown = useCountdown(state.eventDate, state.startTime)
   const breakCountdown = useRemainingUntil(state.breakEndsAt)
+  const estimatedFinish = estimateFinish(state)
+  const preflight = audioPreflight(state)
   const publicChannel = new URLSearchParams(window.location.search).get('publico')
   const publicUrl = `${window.location.origin}${window.location.pathname}?publico=${liveChannel}`
 
   useEffect(() => {
     void QRCode.toDataURL(publicUrl, { width: 280, margin: 1 }).then(setQrImage)
   }, [publicUrl])
+
+  useEffect(() => {
+    if (!state.started) return
+    let lock: { release: () => Promise<void> } | undefined
+    const wakeLock = (navigator as Navigator & { wakeLock?: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock
+    void wakeLock?.request('screen').then(value => { lock = value }).catch(() => undefined)
+    return () => { void lock?.release() }
+  }, [state.started])
 
   useEffect(() => {
     if (publicChannel) return
@@ -219,7 +233,7 @@ function App() {
     const suggested = file.name.replace(/\.[^.]+$/, '')
     const name = window.prompt('Nombre del botón de audio:', suggested)?.trim()
     if (!name) return
-    setCustomSounds((current) => [...current, { id: crypto.randomUUID(), name, url: URL.createObjectURL(file) }])
+    setCustomSounds((current) => [...current, { id: createId(), name, url: URL.createObjectURL(file) }])
   }
 
   const playCustomSound = (url: string) => {
@@ -286,6 +300,7 @@ function App() {
           <button title="QR para espectadores" aria-label="QR para espectadores" onClick={() => setQrOpen(true)}>
             <QrCode />
           </button>
+          <button title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void supabase.auth.signOut()}>SALIR</button>
           <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}>
             <RefreshCcw />
             <span>REINICIAR</span>
@@ -327,9 +342,9 @@ function App() {
           <div className="estimate">
             <span>
               <small>FINAL ESTIMADO</small>
-              <strong>18:42</strong>
+              <strong>{estimatedFinish.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</strong>
             </span>
-            <em>En horario</em>
+            <em>Estimado · 45 s entre pasadas</em>
           </div>
           <div className="search-wrap">
             <label className="search">
@@ -361,6 +376,7 @@ function App() {
           </div>
         </section>
 
+        <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>
         <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
         {!state.started && state.completedStages.length === 0 && (
           <div className="operator-countdown">
@@ -564,7 +580,8 @@ function App() {
           <i /> Guardado automático
         </span>
         <span>Último guardado: ahora</span>
-        <span className={`database-status ${databaseStatus}`}><i />{databaseStatus === 'saved' ? 'Guardado en base de datos' : databaseStatus === 'saving' ? 'Guardando en base de datos…' : databaseStatus === 'offline' ? 'Trabajando localmente · se sincronizará al volver Internet' : databaseStatus === 'error' ? 'Error al guardar en base de datos' : 'Conectando con base de datos…'}</span>
+        <span className={`database-status ${databaseStatus}`}><i />{databaseStatus === 'saved' ? 'Guardado en base de datos' : databaseStatus === 'saving' ? 'Guardando en base de datos…' : databaseStatus === 'offline' ? 'Trabajando localmente · se sincronizará al volver Internet' : databaseStatus === 'conflict' ? 'Conflicto detectado · conservamos la copia local, revisá antes de continuar' : databaseStatus === 'error' ? 'Error al guardar en base de datos' : 'Conectando con base de datos…'}</span>
+        {databaseStatus === 'conflict' && <span className="conflict-actions"><button onClick={() => void resolveConflict('local')}>Conservar este equipo</button><button onClick={() => window.confirm('¿Descartar los cambios locales y cargar la versión de la nube?') && void resolveConflict('remote')}>Usar versión de la nube</button></span>}
         <span className="plvm-credit">
           Desarrollado por <strong>PLVM Soft</strong>
         </span>
@@ -575,7 +592,7 @@ function App() {
       </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
-      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetPublicSectionVisibility={setPublicSectionVisibility} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onDeleteSavedEvent={deleteSavedEvent} offlineEnabled={offlineEnabled} onSetOfflineMode={setOfflineMode} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onImportSkaters={importSkaters} onImportEvent={importEvent} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetPublicSectionVisibility={setPublicSectionVisibility} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onDeleteSavedEvent={deleteSavedEvent} offlineEnabled={offlineEnabled} onSetOfflineMode={setOfflineMode} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
           <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -832,6 +849,12 @@ function PublicView({ state }: { state: PublicState }) {
       </div>
     </main>
   )
+}
+
+function App() {
+  const publicView = new URLSearchParams(window.location.search).has('publico')
+  if (publicView) return <OperatorApp userId="public" />
+  return <AuthGate>{user => <OperatorApp userId={user.id} />}</AuthGate>
 }
 
 export default App

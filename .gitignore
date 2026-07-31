@@ -12,7 +12,15 @@ dist
 dist-ssr
 dist-pages
 .next
+.vinext
 *.local
+backups/
+.tools-node*
+node-v*-win-x64/
+.env
+.env.*
+.auth-signup.json
+!.env.example
 
 # Editor directories and files
 .vscode/*
