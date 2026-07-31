@@ -46,3 +46,4 @@
 | 2026-07-31 | style(operator): escudo junto al nombre y bloque EN PISTA centrado en QR |
 | 2026-07-31 | style(operator): controles de etapas y receso en disposición horizontal compacta |
 | 2026-07-31 | style(operator): barra de estadísticas ubicada inmediatamente sobre el panel activo |
+| 2026-07-31 | style(public): botón del bufet ampliado y destacado |
