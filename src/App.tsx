@@ -10,6 +10,8 @@ import { WeatherCard } from './components/WeatherCard'
 import { useFestival } from './hooks/useFestival'
 import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
 
+const REALTIME_BASE = 'https://ntfy.envs.net'
+
 function useCountdown(eventDate: string, startTime: string) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -152,7 +154,7 @@ function App() {
     }
     const buffetSnapshot = { buffetItems: state.buffetItems }
     const assetSnapshot = { organizerLogo: state.organizerLogo, clubLogos: state.clubLogos }
-    const publishTo = (topic: string, payload: object) => fetch('https://ntfy.sh', {
+    const publishTo = (topic: string, payload: object) => fetch(REALTIME_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic, title: 'Pista en vivo', message: JSON.stringify(payload) }),
@@ -163,10 +165,8 @@ function App() {
       if (state.organizerLogo || Object.keys(state.clubLogos).length) void publishTo(`${liveChannel}-assets`, assetSnapshot)
     }
     const timer = window.setTimeout(publish, 350)
-    const heartbeat = window.setInterval(publish, 5000)
     return () => {
       window.clearTimeout(timer)
-      window.clearInterval(heartbeat)
     }
   }, [state, liveChannel, publicChannel])
 
@@ -734,13 +734,13 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
       }
     }
     const topics = [channel, `${channel}-buffet`, `${channel}-assets`]
-    const sources = topics.map(topic => new EventSource(`https://ntfy.sh/${encodeURIComponent(topic)}/sse?since=latest`))
+    const sources = topics.map(topic => new EventSource(`${REALTIME_BASE}/${encodeURIComponent(topic)}/sse?since=latest`))
     const source = sources[0]
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
     sources.forEach(item => { item.onmessage = (event) => applyEnvelope(event.data) })
     const poll = window.setInterval(() => {
-      topics.forEach(topic => { void fetch(`https://ntfy.sh/${encodeURIComponent(topic)}/json?poll=1&since=latest&_=${Date.now()}`).then((response) => response.text()).then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => { if (topic === channel) setConnected(false) }) })
+      topics.forEach(topic => { void fetch(`${REALTIME_BASE}/${encodeURIComponent(topic)}/json?poll=1&since=latest&_=${Date.now()}`).then((response) => response.text()).then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => { if (topic === channel) setConnected(false) }) })
     }, 5000)
     return () => {
       sources.forEach(item => item.close())
