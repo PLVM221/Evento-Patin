@@ -7,6 +7,7 @@ export const initialFestival: FestivalState = {
   eventDate: '2026-08-15',
   startTime: '09:00',
   countdownMinutes: 30,
+  breakDurationMinutes: 20,
   stageCount: 2,
   currentStage: 1,
   completedStages: [],

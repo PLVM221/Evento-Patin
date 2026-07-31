@@ -26,6 +26,9 @@ export interface FestivalState {
   eventDate: string
   startTime: string
   countdownMinutes: number
+  breakDurationMinutes: number
+  activeBreakAfter?: StageNumber
+  breakEndsAt?: string
   stageCount: StageNumber
   currentStage: StageNumber
   completedStages: StageNumber[]

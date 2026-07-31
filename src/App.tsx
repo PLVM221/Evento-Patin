@@ -1,4 +1,4 @@
- 'use client'
+'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
@@ -25,8 +25,19 @@ function useCountdown(eventDate: string, startTime: string) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+function useRemainingUntil(target?: string) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+  if (!target) return '00:00:00'
+  const totalSeconds = Math.max(0, Math.floor((new Date(target).getTime() - now) / 1000))
+  return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}:${String(totalSeconds % 60).padStart(2, '0')}`
+}
+
 function App() {
-  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -45,57 +56,154 @@ function App() {
   const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
   const [soundEditorOpen, setSoundEditorOpen] = useState(false)
   const [soundButtons, setSoundButtons] = useState([
-    { id: 'applause', name: 'APLAUSOS', icon: '👏', file: 'aplausos.ogg', shortcut: 'F1', gain: .7 },
-    { id: 'strong', name: 'APLAUSOS FUERTES', icon: '👏👏', file: 'aplausos.ogg', shortcut: 'F2', gain: 1 },
-    { id: 'intro', name: 'PRESENTACIÓN', icon: '🎙️', file: 'locutor/presentacion.wav', shortcut: 'F3', gain: 1 },
-    { id: 'next', name: 'PRÓXIMA', icon: '🔔', file: 'locutor/proxima.wav', shortcut: 'F4', gain: 1 },
-    { id: 'congrats', name: 'FELICITACIONES', icon: '🎉', file: 'locutor/felicitaciones.wav', shortcut: 'F6', gain: 1 },
+    {
+      id: 'applause',
+      name: 'APLAUSOS',
+      icon: '👏',
+      file: 'aplausos.ogg',
+      shortcut: 'F1',
+      gain: 0.7,
+    },
+    {
+      id: 'strong',
+      name: 'APLAUSOS FUERTES',
+      icon: '👏👏',
+      file: 'aplausos.ogg',
+      shortcut: 'F2',
+      gain: 1,
+    },
+    {
+      id: 'intro',
+      name: 'PRESENTACIÓN',
+      icon: '🎙️',
+      file: 'locutor/presentacion.wav',
+      shortcut: 'F3',
+      gain: 1,
+    },
+    {
+      id: 'next',
+      name: 'PRÓXIMA',
+      icon: '🔔',
+      file: 'locutor/proxima.wav',
+      shortcut: 'F4',
+      gain: 1,
+    },
+    {
+      id: 'congrats',
+      name: 'FELICITACIONES',
+      icon: '🎉',
+      file: 'locutor/felicitaciones.wav',
+      shortcut: 'F6',
+      gain: 1,
+    },
   ])
-  const stageSkaters = state.skaters.filter(skater => skater.stageNumber === state.currentStage)
-  const active = stageSkaters.find(skater => skater.id === state.activeId)
-  const waiting = stageSkaters.filter(skater => skater.status === 'PENDING' || skater.status === 'POSTPONED')
+  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage)
+  const active = stageSkaters.find((skater) => skater.id === state.activeId)
+  const waiting = stageSkaters.filter((skater) => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
-  const finished = stageSkaters.filter(skater => skater.status === 'FINISHED').length
-  const visible = useMemo(() => stageSkaters.filter(skater => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [stageSkaters, query])
+  const finished = stageSkaters.filter((skater) => skater.status === 'FINISHED').length
+  const visible = useMemo(() => stageSkaters.filter((skater) => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [stageSkaters, query])
   const suggestions = query.trim().length ? visible.slice(0, 6) : []
   const stageName = `Etapa ${state.currentStage} de ${state.stageCount}`
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
   const countdown = useCountdown(state.eventDate, state.startTime)
+  const breakCountdown = useRemainingUntil(state.breakEndsAt)
   const publicChannel = new URLSearchParams(window.location.search).get('publico')
   const publicUrl = `${window.location.origin}${window.location.pathname}?publico=${liveChannel}`
 
-  useEffect(() => { void QRCode.toDataURL(publicUrl, { width: 280, margin: 1 }).then(setQrImage) }, [publicUrl])
+  useEffect(() => {
+    void QRCode.toDataURL(publicUrl, { width: 280, margin: 1 }).then(setQrImage)
+  }, [publicUrl])
 
   useEffect(() => {
     if (publicChannel) return
-    const snapshot = { name: state.name, organizer: state.organizer, location: state.location, eventDate: state.eventDate, startTime: state.startTime, stageCount: state.stageCount, currentStage: state.currentStage, started: state.started, activeId: state.activeId, stageOrders: Object.fromEntries(Array.from({ length: state.stageCount }, (_, index) => { const stage = (index + 1) as StageNumber; return [stage, state.stageOrders[stage] ?? state.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id)] })), skaters: state.skaters.map(({ id, firstName, lastName, club, track, status, stageNumber }) => ({ id, firstName, lastName, club, track, status, stageNumber })) }
-    const publish = () => { void fetch('https://ntfy.sh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: liveChannel, title: 'Pista en vivo', message: JSON.stringify(snapshot) }) }) }
+    const snapshot = {
+      name: state.name,
+      organizer: state.organizer,
+      location: state.location,
+      eventDate: state.eventDate,
+      startTime: state.startTime,
+      stageCount: state.stageCount,
+      currentStage: state.currentStage,
+      started: state.started,
+      activeBreakAfter: state.activeBreakAfter,
+      breakEndsAt: state.breakEndsAt,
+      breakDurationMinutes: state.breakDurationMinutes,
+      activeId: state.activeId,
+      stageOrders: Object.fromEntries(
+        Array.from({ length: state.stageCount }, (_, index) => {
+          const stage = (index + 1) as StageNumber
+          return [stage, state.stageOrders[stage] ?? state.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)]
+        }),
+      ),
+      skaters: state.skaters.map(({ id, firstName, lastName, club, track, status, stageNumber }) => ({
+        id,
+        firstName,
+        lastName,
+        club,
+        track,
+        status,
+        stageNumber,
+      })),
+    }
+    const publish = () => {
+      void fetch('https://ntfy.sh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: liveChannel,
+          title: 'Pista en vivo',
+          message: JSON.stringify(snapshot),
+        }),
+      })
+    }
     const timer = window.setTimeout(publish, 350)
     const heartbeat = window.setInterval(publish, 5000)
-    return () => { window.clearTimeout(timer); window.clearInterval(heartbeat) }
+    return () => {
+      window.clearTimeout(timer)
+      window.clearInterval(heartbeat)
+    }
   }, [state, liveChannel, publicChannel])
 
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
   }
 
-  const playEffect = useCallback((file: string, gain = 1) => {
-    const player = effectPlayer.current
-    if (!player) return
-    player.pause()
-    player.src = `${import.meta.env.BASE_URL}audio/${file}`
-    player.currentTime = 0
-    player.volume = Math.min(1, (state.effectsVolume / 100) * gain)
-    void player.play()
-  }, [state.effectsVolume])
+  const playEffect = useCallback(
+    (file: string, gain = 1) => {
+      const player = effectPlayer.current
+      if (!player) return
+      player.pause()
+      player.src = `${import.meta.env.BASE_URL}audio/${file}`
+      player.currentTime = 0
+      player.volume = Math.min(1, (state.effectsVolume / 100) * gain)
+      void player.play()
+    },
+    [state.effectsVolume],
+  )
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      if (event.key === 'F1') { event.preventDefault(); playEffect('aplausos.ogg', .7) }
-      if (event.key === 'F2') { event.preventDefault(); playEffect('aplausos.ogg') }
-      if (event.key === 'F3') { event.preventDefault(); playEffect('locutor/presentacion.wav') }
-      if (event.key === 'F4') { event.preventDefault(); playEffect('locutor/proxima.wav') }
-      if (event.key === 'F6') { event.preventDefault(); playEffect('locutor/felicitaciones.wav') }
+      if (event.key === 'F1') {
+        event.preventDefault()
+        playEffect('aplausos.ogg', 0.7)
+      }
+      if (event.key === 'F2') {
+        event.preventDefault()
+        playEffect('aplausos.ogg')
+      }
+      if (event.key === 'F3') {
+        event.preventDefault()
+        playEffect('locutor/presentacion.wav')
+      }
+      if (event.key === 'F4') {
+        event.preventDefault()
+        playEffect('locutor/proxima.wav')
+      }
+      if (event.key === 'F6') {
+        event.preventDefault()
+        playEffect('locutor/felicitaciones.wav')
+      }
     }
     window.addEventListener('keydown', handleShortcut)
     return () => window.removeEventListener('keydown', handleShortcut)
@@ -106,7 +214,7 @@ function App() {
     const suggested = file.name.replace(/\.[^.]+$/, '')
     const name = window.prompt('Nombre del botón de audio:', suggested)?.trim()
     if (!name) return
-    setCustomSounds(current => [...current, { id: crypto.randomUUID(), name, url: URL.createObjectURL(file) }])
+    setCustomSounds((current) => [...current, { id: crypto.randomUUID(), name, url: URL.createObjectURL(file) }])
   }
 
   const playCustomSound = (url: string) => {
@@ -119,25 +227,17 @@ function App() {
     void player.play()
   }
 
-  const playSoundButton = (button: typeof soundButtons[number]) => button.file.startsWith('blob:') ? playCustomSound(button.file) : playEffect(button.file, button.gain)
+  const playSoundButton = (button: (typeof soundButtons)[number]) => (button.file.startsWith('blob:') ? playCustomSound(button.file) : playEffect(button.file, button.gain))
 
   const downloadEventList = () => {
     const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
-    const rows: Array<Array<string | number>> = [
-      ['Evento', state.name],
-      ['Club organizador', state.organizer],
-      ['Cantidad de etapas', state.stageCount],
-      [],
-      ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía / Canción'],
-    ]
+    const rows: Array<Array<string | number>> = [['Evento', state.name], ['Club organizador', state.organizer], ['Cantidad de etapas', state.stageCount], [], ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía / Canción']]
     for (let stage = 1; stage <= state.stageCount; stage += 1) {
       const savedOrder = state.stageOrders[stage as 1 | 2 | 3]
-      const ordered = savedOrder
-        ? savedOrder.map(id => state.skaters.find(skater => skater.id === id)).filter((skater): skater is Skater => Boolean(skater))
-        : state.skaters.filter(skater => skater.stageNumber === stage)
+      const ordered = savedOrder ? savedOrder.map((id) => state.skaters.find((skater) => skater.id === id)).filter((skater): skater is Skater => Boolean(skater)) : state.skaters.filter((skater) => skater.stageNumber === stage)
       ordered.forEach((skater, index) => rows.push([`Etapa ${stage}`, index + 1, skater.number, fullName(skater), skater.club, skater.track]))
     }
-    const csv = `\uFEFF${rows.map(row => row.map(quote).join(';')).join('\r\n')}`
+    const csv = `\uFEFF${rows.map((row) => row.map(quote).join(';')).join('\r\n')}`
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a')
     link.href = url
@@ -151,81 +251,304 @@ function App() {
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
       <header>
-        <div className="brand"><div className="brand-mark"><Sparkles /></div><div><strong>PISTA</strong><span>Gestión de eventos</span></div></div>
-        <div className="event-name"><span>EVENTO ACTUAL · {stageName.toUpperCase()}</span><strong>{state.name}</strong><small>Organiza: {state.organizer}</small></div>
+        <div className="brand">
+          <div className="brand-mark">
+            <Sparkles />
+          </div>
+          <div>
+            <strong>PISTA</strong>
+            <span>Gestión de eventos</span>
+          </div>
+        </div>
+        <div className="event-name">
+          <span>EVENTO ACTUAL · {stageName.toUpperCase()}</span>
+          <strong>{state.name}</strong>
+          <small>Organiza: {state.organizer}</small>
+        </div>
         <div className="header-actions">
-          <div className="live-state"><i /> {state.started ? 'EN VIVO' : 'PREPARACIÓN'}</div>
-          <button title="Pantalla completa" aria-label="Pantalla completa" onClick={() => void document.documentElement.requestFullscreen()}><Maximize2 /></button>
-          <button title="Cambiar tema claro/oscuro" aria-label="Cambiar tema" onClick={() => setDark(value => !value)}><Moon /></button>
-          <button title="Administrar evento, patinadoras, clubes y audios" aria-label="Administrar" onClick={() => setAdminOpen(true)}><Settings /></button>
-          <button title="QR para espectadores" aria-label="QR para espectadores" onClick={() => setQrOpen(true)}><QrCode /></button>
-          <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}><RefreshCcw /><span>REINICIAR</span></button>
+          <div className="live-state">
+            <i /> {state.started ? 'EN VIVO' : 'PREPARACIÓN'}
+          </div>
+          <button title="Pantalla completa" aria-label="Pantalla completa" onClick={() => void document.documentElement.requestFullscreen()}>
+            <Maximize2 />
+          </button>
+          <button title="Cambiar tema claro/oscuro" aria-label="Cambiar tema" onClick={() => setDark((value) => !value)}>
+            <Moon />
+          </button>
+          <button title="Administrar evento, patinadoras, clubes y audios" aria-label="Administrar" onClick={() => setAdminOpen(true)}>
+            <Settings />
+          </button>
+          <button title="QR para espectadores" aria-label="QR para espectadores" onClick={() => setQrOpen(true)}>
+            <QrCode />
+          </button>
+          <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}>
+            <RefreshCcw />
+            <span>REINICIAR</span>
+          </button>
         </div>
       </header>
 
       <main>
         <section className="stats">
-          <div><Users /><span><small>PARTICIPANTES ETAPA</small><strong>{stageSkaters.length}</strong></span></div>
-          <div><Check /><span><small>FINALIZADAS</small><strong>{finished}</strong></span></div>
-          <div><Clock3 /><span><small>RESTANTES</small><strong>{stageSkaters.length - finished}</strong></span></div>
-          <div className="stage-stat"><span><small>ETAPA ACTUAL</small><strong>{state.currentStage} / {state.stageCount}</strong></span></div>
-          <div className="estimate"><span><small>FINAL ESTIMADO</small><strong>18:42</strong></span><em>En horario</em></div>
+          <div>
+            <Users />
+            <span>
+              <small>PARTICIPANTES ETAPA</small>
+              <strong>{stageSkaters.length}</strong>
+            </span>
+          </div>
+          <div>
+            <Check />
+            <span>
+              <small>FINALIZADAS</small>
+              <strong>{finished}</strong>
+            </span>
+          </div>
+          <div>
+            <Clock3 />
+            <span>
+              <small>RESTANTES</small>
+              <strong>{stageSkaters.length - finished}</strong>
+            </span>
+          </div>
+          <div className="stage-stat">
+            <span>
+              <small>ETAPA ACTUAL</small>
+              <strong>
+                {state.currentStage} / {state.stageCount}
+              </strong>
+            </span>
+          </div>
+          <div className="estimate">
+            <span>
+              <small>FINAL ESTIMADO</small>
+              <strong>18:42</strong>
+            </span>
+            <em>En horario</em>
+          </div>
           <div className="search-wrap">
-            <label className="search"><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre, club o número..." /></label>
-            {suggestions.length > 0 && <div className="search-results">{suggestions.map(skater => <button key={skater.id} onClick={() => { setSelected(skater); setQuery('') }}><span><strong>{fullName(skater)}</strong><small>{skater.club} · Nº {skater.number}</small></span><em>{skater.status === 'ABSENT' ? 'Ausente' : skater.heat}</em></button>)}</div>}
+            <label className="search">
+              <Search />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, club o número..." />
+            </label>
+            {suggestions.length > 0 && (
+              <div className="search-results">
+                {suggestions.map((skater) => (
+                  <button
+                    key={skater.id}
+                    onClick={() => {
+                      setSelected(skater)
+                      setQuery('')
+                    }}
+                  >
+                    <span>
+                      <strong>{fullName(skater)}</strong>
+                      <small>
+                        {skater.club} · Nº {skater.number}
+                      </small>
+                    </span>
+                    <em>{skater.status === 'ABSENT' ? 'Ausente' : skater.heat}</em>
+                  </button>
+                ))}
+              </div>
+            )}
             {query.trim() && suggestions.length === 0 && <div className="search-results empty-search">Sin coincidencias</div>}
           </div>
         </section>
 
         <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
-        {!state.started && state.completedStages.length === 0 && <div className="operator-countdown"><span>EL EVENTO COMIENZA EN</span><strong>{countdown}</strong><small>HORAS · MINUTOS · SEGUNDOS</small></div>}
+        {!state.started && state.completedStages.length === 0 && (
+          <div className="operator-countdown">
+            <span>EL EVENTO COMIENZA EN</span>
+            <strong>{countdown}</strong>
+            <small>HORAS · MINUTOS · SEGUNDOS</small>
+          </div>
+        )}
 
-        <div className="stage-controls">{Array.from({ length: state.stageCount }, (_, index) => {
-          const stage = (index + 1) as StageNumber
-          const completed = state.completedStages.includes(stage)
-          const isCurrent = stage === state.currentStage
-          const canStartNext = stage === state.currentStage + 1 && currentStageCompleted
-          const label = completed ? `ETAPA ${stage} FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ETAPA ${stage}` : `INICIAR ETAPA ${stage}`) : canStartNext ? `INICIAR ETAPA ${stage}` : `ETAPA ${stage} PENDIENTE`
-          const action = () => {
-            if (canStartNext) { if (window.confirm(`¿Iniciar etapa ${stage}?`)) startNextStage(); return }
-            if (!isCurrent || completed) return
-            if (state.started) { if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage() }
-            else if (window.confirm(`¿Iniciar etapa ${stage}?`)) start()
-          }
-          return <button key={stage} className={`stage-control ${completed ? 'completed' : ''} ${state.started && isCurrent ? 'running' : ''}`} disabled={!isCurrent && !canStartNext || completed} onClick={action}>{completed ? <Check /> : state.started && isCurrent ? <Check /> : <PlayIcon />}<span><strong>{label}</strong><small>{completed ? 'Resultados guardados' : isCurrent && state.started ? 'Cierra esta pasada sin iniciar la siguiente' : canStartNext || isCurrent ? 'La música no comienza automáticamente' : 'Disponible al finalizar etapa anterior'}</small></span></button>
-        })}</div>
+        <div className="stage-controls">
+          {Array.from({ length: state.stageCount }, (_, index) => {
+            const stage = (index + 1) as StageNumber
+            const completed = state.completedStages.includes(stage)
+            const isCurrent = stage === state.currentStage
+            const canStartNext = stage === state.currentStage + 1 && currentStageCompleted && !state.activeBreakAfter
+            const label = completed ? `ETAPA ${stage} FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ETAPA ${stage}` : `INICIAR ETAPA ${stage}`) : canStartNext ? `INICIAR ETAPA ${stage}` : `ETAPA ${stage} PENDIENTE`
+            const action = () => {
+              if (canStartNext) {
+                if (window.confirm(`¿Iniciar etapa ${stage}?`)) startNextStage()
+                return
+              }
+              if (!isCurrent || completed) return
+              if (state.started) {
+                if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage()
+              } else if (window.confirm(`¿Iniciar etapa ${stage}?`)) start()
+            }
+            const breakActive = state.activeBreakAfter === stage
+            const breakEnabled = completed && isCurrent
+            return (
+              <div className="stage-block" key={stage}>
+                <button className={`stage-control ${completed ? 'completed' : ''} ${state.started && isCurrent ? 'running' : ''}`} disabled={(!isCurrent && !canStartNext) || completed} onClick={action}>
+                  {completed ? <Check /> : state.started && isCurrent ? <Check /> : <PlayIcon />}
+                  <span>
+                    <strong>{label}</strong>
+                    <small>{completed ? 'Resultados guardados' : isCurrent && state.started ? 'Cierra esta pasada sin iniciar la siguiente' : canStartNext || isCurrent ? 'La música no comienza automáticamente' : 'Disponible al finalizar etapa anterior'}</small>
+                  </span>
+                </button>
+                {stage < state.stageCount && (
+                  <button className={`break-control ${breakActive ? 'running' : ''}`} disabled={!breakEnabled} onClick={() => (breakActive ? finishBreak() : startBreak(stage))}>
+                    <Clock3 />
+                    <span>
+                      <strong>{breakActive ? 'FINALIZAR RECESO' : `INICIAR RECESO · ${state.breakDurationMinutes} MIN`}</strong>
+                      <small>{breakActive ? `${breakCountdown} · Finaliza ${new Date(state.breakEndsAt!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : breakEnabled ? 'Comenzar cuenta regresiva del intervalo' : `Disponible al finalizar etapa ${stage}`}</small>
+                    </span>
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {state.activeBreakAfter && (
+          <div className="break-banner">
+            <span>RECESO EN CURSO</span>
+            <strong>{breakCountdown}</strong>
+            <small>
+              Finaliza a las{' '}
+              {new Date(state.breakEndsAt!).toLocaleTimeString('es-AR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              })}
+            </small>
+          </div>
+        )}
 
         <div className="live-grid">
           <section className="now-card card">
-            <div className="card-label"><span><i /> {active?.status === 'READY' ? 'PREPARADA' : 'PATINANDO AHORA'}</span><em>{active?.heat}</em></div>
-            {active ? <>
-              <div className="bib">Nº {active.number}</div>
-              <h1>{active.firstName}<br /><strong>{active.lastName}</strong></h1>
-              <p className="club">{active.club}</p>
-              <div className="track"><span>♫</span><div><small>COREOGRAFÍA / CANCIÓN</small><strong>{active.track}</strong><em>{active.category}</em></div></div>
-              <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={value => setVolume('musicVolume', value)} />
-              <div className="critical-actions">
-                <button disabled={!state.started} className="finish" onClick={finalize}><Check /> FINALIZAR</button>
-                <button disabled={!state.started} className="next" onClick={finalize}>SIGUIENTE <ChevronRight /></button>
-              </div>
-            </> : <div className="empty">Festival finalizado</div>}
+            <div className="card-label">
+              <span>
+                <i /> {active?.status === 'READY' ? 'PREPARADA' : 'PATINANDO AHORA'}
+              </span>
+              <em>{active?.heat}</em>
+            </div>
+            {active ? (
+              <>
+                <div className="bib">Nº {active.number}</div>
+                <h1>
+                  {active.firstName}
+                  <br />
+                  <strong>{active.lastName}</strong>
+                </h1>
+                <p className="club">{active.club}</p>
+                <div className="track">
+                  <span>♫</span>
+                  <div>
+                    <small>COREOGRAFÍA / CANCIÓN</small>
+                    <strong>{active.track}</strong>
+                    <em>{active.category}</em>
+                  </div>
+                </div>
+                <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={(value) => setVolume('musicVolume', value)} />
+                <div className="critical-actions">
+                  <button disabled={!state.started} className="finish" onClick={finalize}>
+                    <Check /> FINALIZAR
+                  </button>
+                  <button disabled={!state.started} className="next" onClick={finalize}>
+                    SIGUIENTE <ChevronRight />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="empty">Festival finalizado</div>
+            )}
           </section>
 
           <aside className="up-next card">
-            <div className="aside-title"><span>A CONTINUACIÓN</span><em>{waiting.length} restantes</em></div>
-            {next && <div className="next-person"><div className="avatar">{next.firstName[0]}{next.lastName[0]}</div><div><small>PRÓXIMA PATINADORA · Nº {next.number}</small><h2>{fullName(next)}</h2><p>{next.club}</p><span>♫ {next.track} · {formatTime(next.duration)}</span></div></div>}
+            <div className="aside-title">
+              <span>A CONTINUACIÓN</span>
+              <em>{waiting.length} restantes</em>
+            </div>
+            {next && (
+              <div className="next-person">
+                <div className="avatar">
+                  {next.firstName[0]}
+                  {next.lastName[0]}
+                </div>
+                <div>
+                  <small>PRÓXIMA PATINADORA · Nº {next.number}</small>
+                  <h2>{fullName(next)}</h2>
+                  <p>{next.club}</p>
+                  <span>
+                    ♫ {next.track} · {formatTime(next.duration)}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="waiting-title">EN ESPERA</div>
-            {waiting.slice(1, 5).map((skater, index) => <div className="waiting-row" key={skater.id}><b>{index + 2}</b><div><strong>{fullName(skater)}</strong><small>{skater.club}</small></div><span>{skater.number}</span></div>)}
+            {waiting.slice(1, 5).map((skater, index) => (
+              <div className="waiting-row" key={skater.id}>
+                <b>{index + 2}</b>
+                <div>
+                  <strong>{fullName(skater)}</strong>
+                  <small>{skater.club}</small>
+                </div>
+                <span>{skater.number}</span>
+              </div>
+            ))}
           </aside>
         </div>
 
         <section className="soundboard">
-          <div className="sound-title"><span><Mic2 /> PANEL DEL LOCUTOR <button className="manage-sounds" onClick={() => setSoundEditorOpen(true)}>Administrar botones</button></span><label><Volume2 /><input type="range" min="0" max="100" value={state.effectsVolume} onChange={event => setVolume('effectsVolume', Number(event.target.value))} /><b>{state.effectsVolume}%</b></label></div>
+          <div className="sound-title">
+            <span>
+              <Mic2 /> PANEL DEL LOCUTOR{' '}
+              <button className="manage-sounds" onClick={() => setSoundEditorOpen(true)}>
+                Administrar botones
+              </button>
+            </span>
+            <label>
+              <Volume2 />
+              <input type="range" min="0" max="100" value={state.effectsVolume} onChange={(event) => setVolume('effectsVolume', Number(event.target.value))} />
+              <b>{state.effectsVolume}%</b>
+            </label>
+          </div>
           <div className="sound-buttons">
-            {soundButtons.map(button => <button key={button.id} onClick={() => playSoundButton(button)}><span>{button.icon}</span><strong>{button.name}</strong><kbd>{button.shortcut}</kbd></button>)}
-            {customSounds.map(sound => <button className="custom-sound" key={sound.id} onClick={() => playCustomSound(sound.url)}><Volume2 /><strong>{sound.name}</strong><span className="remove-sound" title="Eliminar" onClick={event => { event.stopPropagation(); URL.revokeObjectURL(sound.url); setCustomSounds(current => current.filter(item => item.id !== sound.id)) }}>×</span></button>)}
-            <button className="add-sound" onClick={() => customSoundInput.current?.click()}>＋ Personalizar</button>
-            <input ref={customSoundInput} className="hidden-file" type="file" accept="audio/*" onChange={event => { addCustomSound(event.target.files?.[0]); event.target.value = '' }} />
+            {soundButtons.map((button) => (
+              <button key={button.id} onClick={() => playSoundButton(button)}>
+                <span>{button.icon}</span>
+                <strong>{button.name}</strong>
+                <kbd>{button.shortcut}</kbd>
+              </button>
+            ))}
+            {customSounds.map((sound) => (
+              <button className="custom-sound" key={sound.id} onClick={() => playCustomSound(sound.url)}>
+                <Volume2 />
+                <strong>{sound.name}</strong>
+                <span
+                  className="remove-sound"
+                  title="Eliminar"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    URL.revokeObjectURL(sound.url)
+                    setCustomSounds((current) => current.filter((item) => item.id !== sound.id))
+                  }}
+                >
+                  ×
+                </span>
+              </button>
+            ))}
+            <button className="add-sound" onClick={() => customSoundInput.current?.click()}>
+              ＋ Personalizar
+            </button>
+            <input
+              ref={customSoundInput}
+              className="hidden-file"
+              type="file"
+              accept="audio/*"
+              onChange={(event) => {
+                addCustomSound(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
           </div>
         </section>
 
@@ -233,12 +556,65 @@ function App() {
       </main>
       <audio ref={effectPlayer} preload="auto" />
 
-      <footer><span><i /> Guardado automático</span><span>Último guardado: ahora</span><span className="plvm-credit">Desarrollado por <strong>PLVM Soft</strong></span><button onClick={undo} disabled={!canUndo}><Undo2 /> DESHACER ÚLTIMA ACCIÓN</button><span className="footer-time">JUE 30 JUL · 14:32</span></footer>
+      <footer>
+        <span>
+          <i /> Guardado automático
+        </span>
+        <span>Último guardado: ahora</span>
+        <span className="plvm-credit">
+          Desarrollado por <strong>PLVM Soft</strong>
+        </span>
+        <button onClick={undo} disabled={!canUndo}>
+          <Undo2 /> DESHACER ÚLTIMA ACCIÓN
+        </button>
+        <span className="footer-time">JUE 30 JUL · 14:32</span>
+      </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
       {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} />}
-      {qrOpen && <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}><div className="modal qr-modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setQrOpen(false)}>×</button><small>PANTALLA PARA ESPECTADORES</small><h2>Escaneá para seguir el evento</h2>{qrImage && <img src={qrImage} alt="QR pantalla pública" />}<a href={publicUrl} target="_blank">{publicUrl}</a></div></div>}
-      {soundEditorOpen && <div className="modal-backdrop" onMouseDown={() => setSoundEditorOpen(false)}><div className="modal sound-editor" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={() => setSoundEditorOpen(false)}>×</button><small>PANEL DEL LOCUTOR</small><h2>Administrar botones</h2>{soundButtons.map(button => <div className="sound-edit-row" key={button.id}><input className="icon-input" aria-label="Icono" value={button.icon} onChange={event => setSoundButtons(items => items.map(item => item.id === button.id ? { ...item, icon: event.target.value } : item))} /><input aria-label="Nombre" value={button.name} onChange={event => setSoundButtons(items => items.map(item => item.id === button.id ? { ...item, name: event.target.value } : item))} /><label className="file-btn">Cambiar audio<input type="file" accept="audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) setSoundButtons(items => items.map(item => item.id === button.id ? { ...item, file: URL.createObjectURL(file) } : item)) }} /></label></div>)}</div></div>}
+      {qrOpen && (
+        <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
+          <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" onClick={() => setQrOpen(false)}>
+              ×
+            </button>
+            <small>PANTALLA PARA ESPECTADORES</small>
+            <h2>Escaneá para seguir el evento</h2>
+            {qrImage && <img src={qrImage} alt="QR pantalla pública" />}
+            <a href={publicUrl} target="_blank">
+              {publicUrl}
+            </a>
+          </div>
+        </div>
+      )}
+      {soundEditorOpen && (
+        <div className="modal-backdrop" onMouseDown={() => setSoundEditorOpen(false)}>
+          <div className="modal sound-editor" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" onClick={() => setSoundEditorOpen(false)}>
+              ×
+            </button>
+            <small>PANEL DEL LOCUTOR</small>
+            <h2>Administrar botones</h2>
+            {soundButtons.map((button) => (
+              <div className="sound-edit-row" key={button.id}>
+                <input className="icon-input" aria-label="Icono" value={button.icon} onChange={(event) => setSoundButtons((items) => items.map((item) => (item.id === button.id ? { ...item, icon: event.target.value } : item)))} />
+                <input aria-label="Nombre" value={button.name} onChange={(event) => setSoundButtons((items) => items.map((item) => (item.id === button.id ? { ...item, name: event.target.value } : item)))} />
+                <label className="file-btn">
+                  Cambiar audio
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0]
+                      if (file) setSoundButtons((items) => items.map((item) => (item.id === button.id ? { ...item, file: URL.createObjectURL(file) } : item)))
+                    }}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -249,29 +625,212 @@ function PlayIcon() {
 
 function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Skater; state: FestivalState; onClose: () => void; onStatus: (id: string, status: SkaterStatus) => void; onMove: (id: string, stage: StageNumber, position: number) => void }) {
   const [stage, setStage] = useState<StageNumber>(state.currentStage)
-  const [position, setPosition] = useState(state.skaters.findIndex(item => item.id === skater.id) + 1)
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><small>PARTICIPANTE Nº {skater.number}</small><h2>{fullName(skater)}</h2><p>{skater.club} · {skater.category}</p><div className="modal-track">♫ {skater.track} · {formatTime(skater.duration)}</div><div className="move-position"><label>Etapa<select value={stage} onChange={event => setStage(Number(event.target.value) as StageNumber)}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></label><label>Posición<input type="number" min="1" max={state.skaters.length} value={position} onChange={event => setPosition(Number(event.target.value))} /></label><button onClick={() => { onMove(skater.id, stage, position); onClose() }}>Mover</button></div><div className="modal-actions">{skater.status === 'ABSENT' ? <button onClick={() => { onStatus(skater.id, 'PENDING'); onClose() }}>Reactivar</button> : <button onClick={() => { onStatus(skater.id, 'ABSENT'); onClose() }}>No se presenta</button>}<button onClick={() => { onStatus(skater.id, 'POSTPONED'); onClose() }}>Posponer</button></div></div></div>
+  const [position, setPosition] = useState(state.skaters.findIndex((item) => item.id === skater.id) + 1)
+  return (
+    <div className="modal-backdrop" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>
+          ×
+        </button>
+        <small>PARTICIPANTE Nº {skater.number}</small>
+        <h2>{fullName(skater)}</h2>
+        <p>
+          {skater.club} · {skater.category}
+        </p>
+        <div className="modal-track">
+          ♫ {skater.track} · {formatTime(skater.duration)}
+        </div>
+        <div className="move-position">
+          <label>
+            Etapa
+            <select value={stage} onChange={(event) => setStage(Number(event.target.value) as StageNumber)}>
+              {Array.from({ length: state.stageCount }, (_, index) => (
+                <option key={index + 1} value={index + 1}>
+                  Etapa {index + 1}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Posición
+            <input type="number" min="1" max={state.skaters.length} value={position} onChange={(event) => setPosition(Number(event.target.value))} />
+          </label>
+          <button
+            onClick={() => {
+              onMove(skater.id, stage, position)
+              onClose()
+            }}
+          >
+            Mover
+          </button>
+        </div>
+        <div className="modal-actions">
+          {skater.status === 'ABSENT' ? (
+            <button
+              onClick={() => {
+                onStatus(skater.id, 'PENDING')
+                onClose()
+              }}
+            >
+              Reactivar
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                onStatus(skater.id, 'ABSENT')
+                onClose()
+              }}
+            >
+              No se presenta
+            </button>
+          )}
+          <button
+            onClick={() => {
+              onStatus(skater.id, 'POSTPONED')
+              onClose()
+            }}
+          >
+            Posponer
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeId' | 'stageOrders'> & { skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>> }
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'activeId' | 'stageOrders'> & {
+  skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
+}
 
 function PublicView({ state, channel }: { state: PublicState; channel: string }) {
   const [live, setLive] = useState<PublicState>(state)
   const [connected, setConnected] = useState(false)
   useEffect(() => {
-    const applyEnvelope = (raw: string) => { try { const envelope = JSON.parse(raw); if (envelope.event === 'message') setLive(JSON.parse(envelope.message)) } catch { /* mensaje ajeno ignorado */ } }
+    const applyEnvelope = (raw: string) => {
+      try {
+        const envelope = JSON.parse(raw)
+        if (envelope.event === 'message') setLive(JSON.parse(envelope.message))
+      } catch {
+        /* mensaje ajeno ignorado */
+      }
+    }
     const source = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse?since=all`)
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
-    source.onmessage = event => applyEnvelope(event.data)
-    const poll = window.setInterval(() => { void fetch(`https://ntfy.sh/${encodeURIComponent(channel)}/json?poll=1&since=latest&_=${Date.now()}`).then(response => response.text()).then(text => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => setConnected(false)) }, 3000)
-    return () => { source.close(); window.clearInterval(poll) }
+    source.onmessage = (event) => applyEnvelope(event.data)
+    const poll = window.setInterval(() => {
+      void fetch(`https://ntfy.sh/${encodeURIComponent(channel)}/json?poll=1&since=latest&_=${Date.now()}`)
+        .then((response) => response.text())
+        .then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope))
+        .catch(() => setConnected(false))
+    }, 3000)
+    return () => {
+      source.close()
+      window.clearInterval(poll)
+    }
   }, [channel])
-  const active = live.skaters.find(skater => skater.id === live.activeId)
-  const pending = live.skaters.filter(skater => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))
+  const active = live.skaters.find((skater) => skater.id === live.activeId)
+  const pending = live.skaters.filter((skater) => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))
   const countdown = useCountdown(live.eventDate, live.startTime)
-  const byId = new Map(live.skaters.map(skater => [skater.id, skater]))
-  return <main className="public-view"><div className="public-brand"><Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i></div><h1>{live.name}</h1><div className="public-organizer"><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong></div><p>{live.location} · Etapa {live.currentStage} de {live.stageCount}</p>{!live.started ? <><div className="public-countdown"><span>Comienza en</span><strong>{countdown}</strong><small>HORAS · MINUTOS · SEGUNDOS</small></div><h3 className="public-list-title">Cronograma completo</h3><div className="public-schedule">{Array.from({ length: live.stageCount }, (_, index) => { const stage = (index + 1) as StageNumber; const ids = live.stageOrders[stage] ?? live.skaters.map(skater => skater.id); return <section key={stage}><h3>Etapa {stage}</h3>{ids.map((id, order) => { const skater = byId.get(id); return skater ? <div className="public-row" key={id}><b>{order + 1}</b><span>{fullName(skater as Skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div> : null })}</section> })}</div></> : <><section><small>EN PISTA</small><h2>{active ? fullName(active as Skater) : 'En preparación'}</h2>{active && <p>{active.club} · {active.track}</p>}</section><div className="public-columns"><div><small>A CONTINUACIÓN</small><h3>{pending[0] ? fullName(pending[0] as Skater) : '—'}</h3><p>{pending[0]?.club}</p></div><div><small>YA PASARON</small><strong>{live.skaters.filter(skater => skater.status === 'FINISHED').length}</strong></div><div><small>RESTANTES</small><strong>{pending.length}</strong></div></div><h3 className="public-list-title">Próximas patinadoras</h3>{pending.slice(1, 8).map((skater, index) => <div className="public-row" key={skater.id}><b>{index + 2}</b><span>{fullName(skater as Skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div>)}</>}<div className="public-credit">Desarrollado por <strong>PLVM Soft</strong></div></main>
+  const breakCountdown = useRemainingUntil(live.breakEndsAt)
+  const byId = new Map(live.skaters.map((skater) => [skater.id, skater]))
+  return (
+    <main className="public-view">
+      <div className="public-brand">
+        <Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i>
+      </div>
+      <h1>{live.name}</h1>
+      <div className="public-organizer">
+        <small>CLUB ORGANIZADOR</small>
+        <strong>{live.organizer}</strong>
+      </div>
+      <p>
+        {live.location} · Etapa {live.currentStage} de {live.stageCount}
+      </p>
+      {live.activeBreakAfter ? (
+        <div className="public-break">
+          <small>RECESO EN CURSO</small>
+          <strong>{breakCountdown}</strong>
+          <span>Finaliza a las {new Date(live.breakEndsAt!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+          <em>A continuación: Etapa {live.activeBreakAfter + 1}</em>
+        </div>
+      ) : !live.started ? (
+        <>
+          <div className="public-countdown">
+            <span>Comienza en</span>
+            <strong>{countdown}</strong>
+            <small>HORAS · MINUTOS · SEGUNDOS</small>
+          </div>
+          <h3 className="public-list-title">Cronograma completo</h3>
+          <div className="public-schedule">
+            {Array.from({ length: live.stageCount }, (_, index) => {
+              const stage = (index + 1) as StageNumber
+              const ids = live.stageOrders[stage] ?? live.skaters.map((skater) => skater.id)
+              return (
+                <section key={stage}>
+                  <h3>Etapa {stage}</h3>
+                  {ids.map((id, order) => {
+                    const skater = byId.get(id)
+                    return skater ? (
+                      <div className="public-row" key={id}>
+                        <b>{order + 1}</b>
+                        <span>
+                          {fullName(skater as Skater)}
+                          <small>{skater.club}</small>
+                        </span>
+                        <em>{skater.track}</em>
+                      </div>
+                    ) : null
+                  })}
+                </section>
+              )
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <section>
+            <small>EN PISTA</small>
+            <h2>{active ? fullName(active as Skater) : 'En preparación'}</h2>
+            {active && (
+              <p>
+                {active.club} · {active.track}
+              </p>
+            )}
+          </section>
+          <div className="public-columns">
+            <div>
+              <small>A CONTINUACIÓN</small>
+              <h3>{pending[0] ? fullName(pending[0] as Skater) : '—'}</h3>
+              <p>{pending[0]?.club}</p>
+            </div>
+            <div>
+              <small>YA PASARON</small>
+              <strong>{live.skaters.filter((skater) => skater.status === 'FINISHED').length}</strong>
+            </div>
+            <div>
+              <small>RESTANTES</small>
+              <strong>{pending.length}</strong>
+            </div>
+          </div>
+          <h3 className="public-list-title">Próximas patinadoras</h3>
+          {pending.slice(1, 8).map((skater, index) => (
+            <div className="public-row" key={skater.id}>
+              <b>{index + 2}</b>
+              <span>
+                {fullName(skater as Skater)}
+                <small>{skater.club}</small>
+              </span>
+              <em>{skater.track}</em>
+            </div>
+          ))}
+        </>
+      )}
+      <div className="public-credit">
+        Desarrollado por <strong>PLVM Soft</strong>
+      </div>
+    </main>
+  )
 }
 
 export default App

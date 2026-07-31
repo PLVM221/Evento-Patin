@@ -16,6 +16,7 @@ const restore = (): FestivalState => {
       currentStage: parsed.currentStage ?? (parsed.stage === 'Segunda etapa' ? 2 : 1),
       completedStages: parsed.completedStages ?? (parsed.firstStageCompleted ? [1] : []),
       stageOrders: parsed.stageOrders ?? {},
+      breakDurationMinutes: parsed.breakDurationMinutes ?? 20,
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageNumber: skater.stageNumber ?? 1,
@@ -92,6 +93,8 @@ export function useFestival() {
     completedStages: [],
     stageOrders: {},
     started: false,
+    activeBreakAfter: undefined,
+    breakEndsAt: undefined,
     activeId: current.skaters.find(skater => skater.stageNumber === 1)?.id,
     elapsed: 0,
     skaters: current.skaters.map(skater => ({ ...skater, stageResults: {}, status: skater.id === current.skaters.find(item => item.stageNumber === 1)?.id ? 'READY' : 'PENDING' })),
@@ -123,10 +126,14 @@ export function useFestival() {
     const ordered = [...orderedStage, ...otherStages]
     const eligible = orderedStage.filter(skater => skater.status !== 'ABSENT')
     const first = eligible[0]
-    return { ...current, currentStage: nextStage, started: true, elapsed: 0, activeId: first?.id, skaters: ordered.map(skater => skater.stageNumber === nextStage ? ({ ...skater, status: skater.id === first?.id ? 'SKATING' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' }) : skater) }
+    return { ...current, currentStage: nextStage, started: true, activeBreakAfter: undefined, breakEndsAt: undefined, elapsed: 0, activeId: first?.id, skaters: ordered.map(skater => skater.stageNumber === nextStage ? ({ ...skater, status: skater.id === first?.id ? 'SKATING' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' }) : skater) }
   })
 
-  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'stageCount'>) =>
+  const startBreak = (afterStage: StageNumber) => update(current => current.completedStages.includes(afterStage) && current.currentStage === afterStage && !current.started ? ({ ...current, activeBreakAfter: afterStage, breakEndsAt: new Date(Date.now() + current.breakDurationMinutes * 60000).toISOString() }) : current)
+
+  const finishBreak = () => update(current => ({ ...current, activeBreakAfter: undefined, breakEndsAt: undefined }))
+
+  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) =>
     update(current => ({ ...current, ...values, currentStage: Math.min(current.currentStage, values.stageCount) as StageNumber, completedStages: current.completedStages.filter(stage => stage <= values.stageCount) }))
 
   const addSkater = (skater: Omit<FestivalState['skaters'][number], 'id' | 'status'>) =>
@@ -153,5 +160,5 @@ export function useFestival() {
     if (previous) setState(previous)
   }
 
-  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
+  return { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, undo, canUndo: history.current.length > 0 }
 }
