@@ -20,7 +20,8 @@ const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStage
       teachers: parsed.teachers ?? [],
       buffetItems: parsed.buffetItems ?? [],
       raffleTicketPrice: parsed.raffleTicketPrice ?? 0,
-      rafflePrizes: parsed.rafflePrizes ?? [],
+      rafflePrices: parsed.rafflePrices ?? (parsed.raffleTicketPrice ? [{ id: 'legacy-price', quantity: 1, price: parsed.raffleTicketPrice }] : []),
+      rafflePrizes: (parsed.rafflePrizes ?? []).map((prize, index) => ({ ...prize, order: prize.order ?? index + 1 })),
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageNumber: skater.stageNumber ?? 1,
@@ -224,6 +225,8 @@ export function useFestival() {
   const updateSkater = (id: string, values: Partial<FestivalState['skaters'][number]>) =>
     update(current => ({ ...current, skaters: current.skaters.map(skater => skater.id === id ? { ...skater, ...values } : skater) }))
 
+  const removeSkater = (id: string) => update(current => ({ ...current, activeId: current.activeId === id ? undefined : current.activeId, stageOrders: Object.fromEntries(Object.entries(current.stageOrders).map(([stage, ids]) => [stage, ids?.filter(item => item !== id)])), skaters: current.skaters.filter(skater => skater.id !== id) }))
+
   const renameClub = (from: string, to: string) =>
     update(current => { const clubLogos = { ...current.clubLogos }; if (clubLogos[from]) { clubLogos[to] = clubLogos[from]; delete clubLogos[from] }; return { ...current, clubLogos, clubs: current.clubs.map(club => club === from ? to : club), teachers: current.teachers.map(teacher => teacher.club === from ? { ...teacher, club: to } : teacher), skaters: current.skaters.map(skater => skater.club === from ? { ...skater, club: to } : skater) } })
 
@@ -243,7 +246,11 @@ export function useFestival() {
 
   const setRaffleTicketPrice = (price: number) => update(current => ({ ...current, raffleTicketPrice: Math.max(0, price) }))
 
-  const addRafflePrize = (name: string) => update(current => ({ ...current, rafflePrizes: [...current.rafflePrizes, { id: crypto.randomUUID(), name, winningNumber: '' }] }))
+  const addRafflePrice = (quantity: number, price: number) => update(current => ({ ...current, rafflePrices: [...current.rafflePrices.filter(item => item.quantity !== quantity), { id: crypto.randomUUID(), quantity, price }].sort((a, b) => a.quantity - b.quantity) }))
+
+  const removeRafflePrice = (id: string) => update(current => ({ ...current, rafflePrices: current.rafflePrices.filter(item => item.id !== id) }))
+
+  const addRafflePrize = (name: string, order: number) => update(current => ({ ...current, rafflePrizes: [...current.rafflePrizes, { id: crypto.randomUUID(), order, name, winningNumber: '' }].sort((a, b) => a.order - b.order) }))
 
   const updateRafflePrize = (id: string, values: Partial<FestivalState['rafflePrizes'][number]>) => update(current => ({ ...current, rafflePrizes: current.rafflePrizes.map(prize => prize.id === id ? { ...prize, ...values } : prize) }))
 
@@ -266,7 +273,7 @@ export function useFestival() {
     return true
   }
 
-  const clearFestival = () => update(current => ({ ...current, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], raffleTicketPrice: 0, rafflePrizes: [], skaters: [], activeId: undefined, elapsed: 0 }))
+  const clearFestival = () => update(current => ({ ...current, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], raffleTicketPrice: 0, rafflePrices: [], rafflePrizes: [], skaters: [], activeId: undefined, elapsed: 0 }))
 
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
     const ids = [...(current.stageOrders[stage] ?? current.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id))].filter(skaterId => skaterId !== id)
@@ -283,5 +290,5 @@ export function useFestival() {
     if (previous) { setState(previous); persist(previous) }
   }
 
-  return { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setRaffleTicketPrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
 }

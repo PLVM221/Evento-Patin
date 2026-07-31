@@ -45,6 +45,7 @@ interface Props {
   onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
+  onRemoveSkater: (id: string) => void
   onRenameClub: (from: string, to: string) => void
   onAddClub: (name: string) => void
   onUpdateClubLogo: (club: string, logo: string) => void
@@ -54,7 +55,9 @@ interface Props {
   onUpdateBuffetItem: (id: string, values: Partial<FestivalState['buffetItems'][number]>) => void
   onRemoveBuffetItem: (id: string) => void
   onSetRaffleTicketPrice: (price: number) => void
-  onAddRafflePrize: (name: string) => void
+  onAddRafflePrice: (quantity: number, price: number) => void
+  onRemoveRafflePrice: (id: string) => void
+  onAddRafflePrize: (name: string, order: number) => void
   onUpdateRafflePrize: (id: string, values: Partial<FestivalState['rafflePrizes'][number]>) => void
   onRemoveRafflePrize: (id: string) => void
   savedEvents: SavedEvent[]
@@ -63,7 +66,7 @@ interface Props {
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetRaffleTicketPrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -83,11 +86,11 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
         </nav>
         <div className="admin-content">
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
-          {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} />}
+          {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
-          {tab === 'sorteo' && <RaffleAdmin state={state} onSetPrice={onSetRaffleTicketPrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
+          {tab === 'sorteo' && <RaffleAdmin state={state} onAddPrice={onAddRafflePrice} onRemovePrice={onRemoveRafflePrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
           {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
@@ -113,7 +116,7 @@ function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave
   </form>
 }
 
-function SkaterAdmin({ state, onAdd, onUpdate }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater'] }) {
+function SkaterAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
   const empty: Omit<Skater, 'id' | 'status'> = { number: state.skaters.length + 1, firstName: '', lastName: '', club: '', category: '', track: '', duration: 180, heat: 'Tanda 1', stageNumber: 1, notes: '' }
   const [form, setForm] = useState(empty)
   const submit = (event: FormEvent) => { event.preventDefault(); onAdd(form); setForm({ ...empty, number: form.number + 1 }) }
@@ -129,7 +132,7 @@ function SkaterAdmin({ state, onAdd, onUpdate }: { state: FestivalState; onAdd: 
       <select aria-label="Etapa" value={form.stageNumber} onChange={event => setForm({ ...form, stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select>
       <button><Plus /> Agregar</button>
     </form>
-    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></div>)}</div>
+    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
   </div>
 }
 
@@ -157,9 +160,12 @@ function BuffetAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalStat
   return <div><div className="admin-intro"><h3>Bufet</h3><p>Cargá los productos y precios que verán los espectadores desde el QR.</p></div><form className="buffet-add" onSubmit={event => { event.preventDefault(); if (name.trim() && price > 0) { onAdd(name.trim(), price); setName(''); setPrice(0); window.setTimeout(() => productInput.current?.focus(), 0) } }}><input ref={productInput} placeholder="Producto" required value={name} onChange={event => setName(event.target.value)} /><input aria-label="Precio" type="number" min="1" step="1" required value={price || ''} onChange={event => setPrice(Number(event.target.value))} /><button disabled={!name.trim() || price <= 0}><Plus /> Agregar</button></form><div className="buffet-admin-list">{state.buffetItems.map(item => <div key={item.id}><input value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><label>$ <input type="number" min="1" value={item.price} onChange={event => { const value = Number(event.target.value); if (value > 0) onUpdate(item.id, { price: value }) }} /></label><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
 }
 
-function RaffleAdmin({ state, onSetPrice, onAdd, onUpdate, onRemove }: { state: FestivalState; onSetPrice: Props['onSetRaffleTicketPrice']; onAdd: Props['onAddRafflePrize']; onUpdate: Props['onUpdateRafflePrize']; onRemove: Props['onRemoveRafflePrize'] }) {
+function RaffleAdmin({ state, onAddPrice, onRemovePrice, onAdd, onUpdate, onRemove }: { state: FestivalState; onAddPrice: Props['onAddRafflePrice']; onRemovePrice: Props['onRemoveRafflePrice']; onAdd: Props['onAddRafflePrize']; onUpdate: Props['onUpdateRafflePrize']; onRemove: Props['onRemoveRafflePrize'] }) {
   const [prize, setPrize] = useState('')
-  return <div><div className="admin-intro"><h3>Sorteo</h3><p>Configurá el valor de los números, los premios y publicá cada número ganador.</p></div><label className="raffle-price">Valor de cada número<input type="number" min="0" step="1" value={state.raffleTicketPrice || ''} onChange={event => onSetPrice(Number(event.target.value))} /></label><form className="raffle-add" onSubmit={event => { event.preventDefault(); if (prize.trim()) { onAdd(prize.trim()); setPrize('') } }}><input placeholder="Premio (ej.: Canasta de productos)" required value={prize} onChange={event => setPrize(event.target.value)} /><button><Plus /> Agregar premio</button></form><div className="raffle-admin-list">{state.rafflePrizes.map((item, index) => <div key={item.id}><b>{index + 1}°</b><input aria-label={`Premio ${index + 1}`} value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><input aria-label={`Número ganador del premio ${index + 1}`} placeholder="N.º ganador" value={item.winningNumber} onChange={event => onUpdate(item.id, { winningNumber: event.target.value })} /><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
+  const [quantity, setQuantity] = useState(1)
+  const [price, setPrice] = useState(0)
+  const [order, setOrder] = useState(state.rafflePrizes.length + 1)
+  return <div><div className="admin-intro"><h3>Sorteo</h3><p>Configurá promociones, premios y publicá cada número ganador.</p></div><form className="raffle-price-add" onSubmit={event => { event.preventDefault(); if (quantity > 0 && price > 0) { onAddPrice(quantity, price); setPrice(0) } }}><label>Cantidad de números<select value={quantity} onChange={event => setQuantity(Number(event.target.value))}>{Array.from({ length: 20 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} {index ? 'números' : 'número'}</option>)}</select></label><label>Precio total<input type="number" min="1" required value={price || ''} onChange={event => setPrice(Number(event.target.value))} /></label><button>Guardar valor</button></form><div className="raffle-price-list">{state.rafflePrices.map(item => <div key={item.id}><strong>{item.quantity} {item.quantity === 1 ? 'número' : 'números'}</strong><span>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</span><button onClick={() => onRemovePrice(item.id)}>Eliminar</button></div>)}</div><form className="raffle-add" onSubmit={event => { event.preventDefault(); if (prize.trim() && order > 0) { onAdd(prize.trim(), order); setPrize(''); setOrder(current => current + 1) } }}><input className="prize-order" aria-label="Número de premio" type="number" min="1" required value={order} onChange={event => setOrder(Number(event.target.value))} /><input placeholder="Premio (ej.: Canasta de productos)" required value={prize} onChange={event => setPrize(event.target.value)} /><button><Plus /> Agregar premio</button></form><div className="raffle-admin-list">{state.rafflePrizes.map(item => <div key={item.id}><input aria-label="Número de premio" type="number" min="1" value={item.order} onChange={event => onUpdate(item.id, { order: Number(event.target.value) })} /><input aria-label={`Premio ${item.order}`} value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><input aria-label={`Número ganador del premio ${item.order}`} placeholder="N.º ganador" value={item.winningNumber} onChange={event => onUpdate(item.id, { winningNumber: event.target.value })} /><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
 }
 
 function BackupAdmin({ state, savedEvents, onSave, onRestore }: { state: FestivalState; savedEvents: SavedEvent[]; onSave: Props['onSaveEvent']; onRestore: Props['onRestoreEvent'] }) {

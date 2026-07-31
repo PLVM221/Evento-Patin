@@ -62,3 +62,5 @@
 | 2026-07-31 | fix(public): escudo organizador en pista, tarjeta móvil ordenada y reanudación al desbloquear |
 | 2026-07-31 | fix(admin): contraste y visibilidad del botón para cargar/cambiar marco QR |
 | 2026-07-31 | ux(admin): solapas visibles de Sorteo y Copias con restauración desde Supabase |
+| 2026-07-31 | feat(admin): eliminación de patinadoras y promociones múltiples para sorteo |
+| 2026-07-31 | feat(sorteo): número de orden configurable para cada premio |

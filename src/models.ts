@@ -15,8 +15,15 @@ export interface BuffetItem {
 
 export interface RafflePrize {
   id: string
+  order: number
   name: string
   winningNumber: string
+}
+
+export interface RafflePrice {
+  id: string
+  quantity: number
+  price: number
 }
 
 export interface SavedEvent {
@@ -65,6 +72,7 @@ export interface FestivalState {
   teachers: Teacher[]
   buffetItems: BuffetItem[]
   raffleTicketPrice: number
+  rafflePrices: RafflePrice[]
   rafflePrizes: RafflePrize[]
   skaters: Skater[]
   activeId?: string

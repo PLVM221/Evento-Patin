@@ -30,6 +30,7 @@ export const initialFestival: FestivalState = {
     { id: 'b3', name: 'Hamburguesa', price: 4500 },
   ],
   raffleTicketPrice: 0,
+  rafflePrices: [],
   rafflePrizes: [],
   activeId: '3',
   elapsed: 137,
