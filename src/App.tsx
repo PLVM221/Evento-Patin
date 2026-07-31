@@ -727,12 +727,15 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
     const applyEnvelope = (raw: string) => {
       try {
         const envelope = JSON.parse(raw)
-        if (envelope.event === 'message') setLive(JSON.parse(envelope.message))
+        if (envelope.event === 'message') {
+          const incoming = JSON.parse(envelope.message) as Partial<PublicState>
+          setLive(current => ({ ...current, ...incoming, organizer: incoming.organizer ?? current.organizer ?? '', organizerLogo: incoming.organizerLogo ?? current.organizerLogo ?? '', clubs: incoming.clubs ?? current.clubs ?? [], clubLogos: incoming.clubLogos ?? current.clubLogos ?? {}, teachers: incoming.teachers ?? current.teachers ?? [], buffetItems: incoming.buffetItems ?? current.buffetItems ?? [], stageOrders: incoming.stageOrders ?? current.stageOrders ?? {}, skaters: incoming.skaters ?? current.skaters ?? [] }))
+        }
       } catch {
         /* mensaje ajeno ignorado */
       }
     }
-    const source = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse?since=all`)
+    const source = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse?since=latest`)
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
     source.onmessage = (event) => applyEnvelope(event.data)
