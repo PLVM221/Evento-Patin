@@ -66,3 +66,4 @@
 | 2026-07-31 | feat(sorteo): número de orden configurable para cada premio |
 | 2026-07-31 | feat(public): visibilidad configurable de los botones Bufet y Sorteo |
 | 2026-07-31 | fix(sorteo): orden de premio editable y número ganador destacado en QR |
+| 2026-07-31 | feat(backups): eliminación individual confirmada de copias en Supabase |

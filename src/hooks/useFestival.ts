@@ -277,6 +277,13 @@ export function useFestival() {
     return true
   }
 
+  const deleteSavedEvent = async (id: string) => {
+    const { error } = await supabase.from('festival_state').delete().eq('id', id).like('id', 'saved-%')
+    if (error) { setDatabaseStatus('error'); return false }
+    await loadSavedEvents()
+    return true
+  }
+
   const clearFestival = () => update(current => ({ ...current, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], showBuffet: false, showRaffle: false, raffleTicketPrice: 0, rafflePrices: [], rafflePrizes: [], skaters: [], activeId: undefined, elapsed: 0 }))
 
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
@@ -294,5 +301,5 @@ export function useFestival() {
     if (previous) { setState(previous); persist(previous) }
   }
 
-  return { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
 }
