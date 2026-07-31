@@ -13,11 +13,12 @@ interface Props {
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
   onRenameClub: (from: string, to: string) => void
   onAddClub: (name: string) => void
+  onUpdateClubLogo: (club: string, logo: string) => void
   onAddTeacher: (name: string, club: string) => void
   onRemoveTeacher: (id: string) => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub, onAddClub, onAddTeacher, onRemoveTeacher }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -36,7 +37,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} />}
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
-          {tab === 'clubes' && <ClubAdmin clubs={clubs} onRename={onRenameClub} onAdd={onAddClub} />}
+          {tab === 'clubes' && <ClubAdmin clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onLogo={onUpdateClubLogo} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
       </section>
@@ -85,14 +86,15 @@ function TeacherAdmin({ state, onAdd, onRemove }: { state: FestivalState; onAdd:
   return <div><div className="admin-intro"><h3>Seños</h3><p>Cargá las profesoras y vinculalas con un club previamente registrado.</p></div><form className="teacher-add" onSubmit={event => { event.preventDefault(); if (name.trim() && club) { onAdd(name.trim(), club); setName('') } }}><input placeholder="Nombre y apellido de la seño" required value={name} onChange={event => setName(event.target.value)} /><select required value={club} onChange={event => setClub(event.target.value)}><option value="">Seleccionar club</option>{state.clubs.map(item => <option key={item}>{item}</option>)}</select><button><Plus /> Agregar</button></form><div className="teacher-list">{state.teachers.map(teacher => <div key={teacher.id}><span><strong>{teacher.name}</strong><small>{teacher.club}</small></span><button onClick={() => onRemove(teacher.id)}>Eliminar</button></div>)}</div></div>
 }
 
-function ClubAdmin({ clubs, onRename, onAdd }: { clubs: string[]; onRename: Props['onRenameClub']; onAdd: Props['onAddClub'] }) {
+function ClubAdmin({ clubs, logos, onRename, onAdd, onLogo }: { clubs: string[]; logos: Record<string, string>; onRename: Props['onRenameClub']; onAdd: Props['onAddClub']; onLogo: Props['onUpdateClubLogo'] }) {
   const [name, setName] = useState('')
-  return <div><div className="admin-intro"><h3>Clubes</h3><p>Cargá primero los clubes. Luego estarán disponibles en Patinadoras y Seños.</p></div><form className="club-add" onSubmit={event => { event.preventDefault(); if (name.trim()) { onAdd(name.trim()); setName('') } }}><input placeholder="Nombre del club" required value={name} onChange={event => setName(event.target.value)} /><button><Plus /> Agregar club</button></form><div className="club-list">{clubs.map(club => <ClubRow key={club} club={club} onRename={onRename} />)}</div></div>
+  return <div><div className="admin-intro"><h3>Clubes</h3><p>Cargá los clubes y, si querés, agregá su escudo. Sin imagen se mostrarán las iniciales.</p></div><form className="club-add" onSubmit={event => { event.preventDefault(); if (name.trim()) { onAdd(name.trim()); setName('') } }}><input placeholder="Nombre del club" required value={name} onChange={event => setName(event.target.value)} /><button><Plus /> Agregar club</button></form><div className="club-list">{clubs.map(club => <ClubRow key={club} club={club} logo={logos[club]} onRename={onRename} onLogo={onLogo} />)}</div></div>
 }
 
-function ClubRow({ club, onRename }: { club: string; onRename: Props['onRenameClub'] }) {
+function ClubRow({ club, logo, onRename, onLogo }: { club: string; logo?: string; onRename: Props['onRenameClub']; onLogo: Props['onUpdateClubLogo'] }) {
   const [name, setName] = useState(club)
-  return <div><input value={name} onChange={event => setName(event.target.value)} /><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button></div>
+  const initials = club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()
+  return <div className="club-admin-row"><div className="club-logo-preview">{logo ? <img src={logo} alt={`Escudo de ${club}`} /> : initials}</div><input value={name} onChange={event => setName(event.target.value)} /><label className="file-btn">{logo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => onLogo(club, String(reader.result)); reader.readAsDataURL(file) }} /></label><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button></div>
 }
 
 function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props['onUpdateSkater'] }) {

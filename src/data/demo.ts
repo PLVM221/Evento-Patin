@@ -14,6 +14,7 @@ export const initialFestival: FestivalState = {
   stageOrders: {},
   started: false,
   clubs: ['Club Atlético Provincial', 'Club Horizonte', 'Club Regatas', 'Estrella del Sur', 'Unión Central'],
+  clubLogos: {},
   teachers: [
     { id: 't1', name: 'Mariana Gómez', club: 'Club Atlético Provincial' },
     { id: 't2', name: 'Laura Fernández', club: 'Club Horizonte' },

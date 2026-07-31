@@ -37,7 +37,7 @@ function useRemainingUntil(target?: string) {
 }
 
 function App() {
-  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, addTeacher, removeTeacher, undo, canUndo } = useFestival()
+  const { state, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -131,6 +131,7 @@ function App() {
       breakEndsAt: state.breakEndsAt,
       breakDurationMinutes: state.breakDurationMinutes,
       clubs: state.clubs,
+      clubLogos: state.clubLogos,
       teachers: state.teachers,
       activeId: state.activeId,
       stageOrders: Object.fromEntries(
@@ -501,8 +502,6 @@ function App() {
           </aside>
         </div>
 
-        <ParticipatingClubs clubs={state.clubs} teachers={state.teachers} skaters={state.skaters} />
-
         <section className="soundboard">
           <div className="sound-title">
             <span>
@@ -559,6 +558,7 @@ function App() {
         </section>
 
         <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />
+        <ParticipatingClubs clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} />
       </main>
       <audio ref={effectPlayer} preload="auto" />
 
@@ -577,7 +577,7 @@ function App() {
       </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
-      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} onAddClub={addClub} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} />}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
           <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -625,10 +625,10 @@ function App() {
   )
 }
 
-function ParticipatingClubs({ clubs, teachers, skaters }: { clubs: string[]; teachers: Teacher[]; skaters: Array<{ club: string }> }) {
+function ParticipatingClubs({ clubs, clubLogos, teachers, skaters }: { clubs: string[]; clubLogos: Record<string, string>; teachers: Teacher[]; skaters: Array<{ club: string }> }) {
   const participating = clubs.filter((club) => skaters.some((skater) => skater.club === club))
   if (participating.length === 0) return null
-  return <section className="participating-clubs"><div className="clubs-heading"><small>COMUNIDAD DEL EVENTO</small><h2>Clubes participantes</h2><p>Cada equipo junto a sus seños responsables.</p></div><div className="clubs-grid">{participating.map((club) => { const clubTeachers = teachers.filter((teacher) => teacher.club === club); const count = skaters.filter((skater) => skater.club === club).length; return <article key={club}><div className="club-monogram">{club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><strong>{club}</strong><span>{count} {count === 1 ? 'patinadora' : 'patinadoras'}</span><small>{clubTeachers.length ? `Seño${clubTeachers.length > 1 ? 's' : ''}: ${clubTeachers.map((teacher) => teacher.name).join(' · ')}` : 'Seño pendiente de asignación'}</small></div></article> })}</div></section>
+  return <section className="participating-clubs"><div className="clubs-heading"><small>COMUNIDAD DEL EVENTO</small><h2>Clubes invitados</h2><p>Cada equipo junto a sus seños responsables.</p></div><div className="clubs-grid">{participating.map((club) => { const clubTeachers = teachers.filter((teacher) => teacher.club === club); const count = skaters.filter((skater) => skater.club === club).length; const initials = club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase(); return <article key={club}><div className="club-monogram">{clubLogos[club] ? <img src={clubLogos[club]} alt={`Escudo de ${club}`} /> : initials}</div><div><strong>{club}</strong><span>{count} {count === 1 ? 'patinadora' : 'patinadoras'}</span><small>{clubTeachers.length ? `Seño${clubTeachers.length > 1 ? 's' : ''}: ${clubTeachers.map((teacher) => teacher.name).join(' · ')}` : 'Seño pendiente de asignación'}</small></div></article> })}</div></section>
 }
 
 function PlayIcon() {
@@ -710,7 +710,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'teachers' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -840,7 +840,7 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
           ))}
         </>
       )}
-      <ParticipatingClubs clubs={live.clubs ?? []} teachers={live.teachers ?? []} skaters={live.skaters} />
+      <ParticipatingClubs clubs={live.clubs ?? []} clubLogos={live.clubLogos ?? {}} teachers={live.teachers ?? []} skaters={live.skaters} />
       <div className="public-credit">
         Desarrollado por <strong>PLVM Soft</strong>
       </div>
