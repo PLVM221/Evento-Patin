@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { initialFestival } from '../data/demo'
+import { supabase } from '../lib/supabase'
 import type { FestivalState, SkaterStatus, StageNumber } from '../models'
 
 const STORAGE_KEY = 'pista-festival-state-v1'
 
-const restore = (): FestivalState => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return initialFestival
-    const parsed = JSON.parse(saved)
-    return {
+const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStageCompleted?: boolean }): FestivalState => ({
       ...initialFestival,
       ...parsed,
       organizerLogo: parsed.organizerLogo ?? '',
@@ -27,7 +23,13 @@ const restore = (): FestivalState => {
         stageNumber: skater.stageNumber ?? 1,
         stageResults: skater.stageResults ?? (skater.firstStageStatus ? { 1: skater.firstStageStatus } : {}),
       })),
-    }
+})
+
+const restore = (): FestivalState => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return initialFestival
+    return normalize(JSON.parse(saved))
   } catch {
     return initialFestival
   }
@@ -36,8 +38,44 @@ const restore = (): FestivalState => {
 export function useFestival() {
   const [state, setState] = useState<FestivalState>(restore)
   const history = useRef<FestivalState[]>([])
+  const initialState = useRef(state)
+  const cloudReady = useRef(false)
+  const applyingRemote = useRef(false)
+  const saveTimer = useRef<number | undefined>(undefined)
 
-  useEffect(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(state)), [state])
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      const { data, error } = await supabase.from('festival_state').select('data').eq('id', 'current').maybeSingle()
+      if (!active) return
+      if (!error && data?.data) {
+        applyingRemote.current = true
+        setState(normalize(data.data as Partial<FestivalState>))
+      } else if (!error) {
+        await supabase.from('festival_state').upsert({ id: 'current', data: initialState.current, updated_at: new Date().toISOString() })
+      }
+      cloudReady.current = !error
+    }
+    void load()
+    const poll = window.setInterval(() => void load(), 5000)
+    const channel = supabase.channel('festival-state-live').on('postgres_changes', { event: '*', schema: 'public', table: 'festival_state', filter: 'id=eq.current' }, payload => {
+      const row = payload.new as { data?: Partial<FestivalState> }
+      if (row.data) {
+        applyingRemote.current = true
+        setState(normalize(row.data))
+      }
+    }).subscribe()
+    return () => { active = false; window.clearInterval(poll); void supabase.removeChannel(channel) }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    if (applyingRemote.current) { applyingRemote.current = false; return }
+    if (!cloudReady.current) return
+    window.clearTimeout(saveTimer.current)
+    saveTimer.current = window.setTimeout(() => { void supabase.from('festival_state').upsert({ id: 'current', data: state, updated_at: new Date().toISOString() }) }, 400)
+    return () => window.clearTimeout(saveTimer.current)
+  }, [state])
 
   const update = useCallback((recipe: (current: FestivalState) => FestivalState) => {
     setState(current => {

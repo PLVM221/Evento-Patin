@@ -251,7 +251,7 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  if (publicChannel) return <PublicView state={state} channel={publicChannel} />
+  if (publicChannel) return <PublicView state={state} />
 
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
@@ -711,37 +711,12 @@ type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
-function PublicView({ state, channel }: { state: PublicState; channel: string }) {
+function PublicView({ state }: { state: PublicState }) {
   const [live, setLive] = useState<PublicState>(state)
-  const [connected, setConnected] = useState(false)
+  const connected = true
   const [selectedClub, setSelectedClub] = useState<string>()
   const [buffetOpen, setBuffetOpen] = useState(false)
-  useEffect(() => {
-    const applyEnvelope = (raw: string) => {
-      try {
-        const envelope = JSON.parse(raw)
-        if (envelope.event === 'message') {
-          const incoming = JSON.parse(envelope.message) as Partial<PublicState>
-          setLive(current => ({ ...current, ...incoming, organizer: incoming.organizer ?? current.organizer ?? '', organizerLogo: incoming.organizerLogo ?? current.organizerLogo ?? '', clubs: incoming.clubs ?? current.clubs ?? [], clubLogos: incoming.clubLogos ?? current.clubLogos ?? {}, teachers: incoming.teachers ?? current.teachers ?? [], buffetItems: incoming.buffetItems ?? current.buffetItems ?? [], stageOrders: incoming.stageOrders ?? current.stageOrders ?? {}, skaters: incoming.skaters ?? current.skaters ?? [] }))
-        }
-      } catch {
-        /* mensaje ajeno ignorado */
-      }
-    }
-    const topics = [channel, `${channel}-buffet`, `${channel}-assets`]
-    const sources = topics.map(topic => new EventSource(`${REALTIME_BASE}/${encodeURIComponent(topic)}/sse?since=latest`))
-    const source = sources[0]
-    source.onopen = () => setConnected(true)
-    source.onerror = () => setConnected(false)
-    sources.forEach(item => { item.onmessage = (event) => applyEnvelope(event.data) })
-    const poll = window.setInterval(() => {
-      topics.forEach(topic => { void fetch(`${REALTIME_BASE}/${encodeURIComponent(topic)}/json?poll=1&since=latest&_=${Date.now()}`).then((response) => response.text()).then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => { if (topic === channel) setConnected(false) }) })
-    }, 5000)
-    return () => {
-      sources.forEach(item => item.close())
-      window.clearInterval(poll)
-    }
-  }, [channel])
+  useEffect(() => setLive(state), [state])
   const active = live.skaters.find((skater) => skater.id === live.activeId)
   const activeTeachers = active ? (live.teachers ?? []).filter((teacher) => teacher.club === active.club) : []
   const pending = live.skaters.filter((skater) => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))

@@ -49,3 +49,4 @@
 | 2026-07-31 | style(public): botón del bufet ampliado y destacado |
 | 2026-07-31 | style(public): métricas Ya pasaron y Restantes centradas |
 | 2026-07-31 | fix(public): contraste y legibilidad de la seño en ficha de club |
+| 2026-07-31 | feat(storage): persistencia multi-equipo y tiempo real preparada con Supabase |
