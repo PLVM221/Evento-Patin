@@ -28,3 +28,4 @@
 | 16:55 | feat(export): descarga CSV con orden por etapa, patinadora, club y coreografía |
 | 2026-07-31 | feat: etapas separadas, clima/ubicación, mover por etapa, QR y vista pública |
 | 2026-07-31 | feat(realtime): sincronización SSE temporal entre operador y espectadores |
+| 2026-07-31 | brand: firma Desarrollado por PLVM Soft en panel y vista pública |
