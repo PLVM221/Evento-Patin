@@ -56,3 +56,4 @@
 | 2026-07-31 | fix(bufet): borrado persistente y precio positivo obligatorio |
 | 2026-07-31 | fix(storage): cola serial de escrituras y polling exclusivo de la vista QR |
 | 2026-07-31 | fix(media): compresión WebP de escudos para evitar estados Supabase de varios MB |
+| 2026-07-31 | feat(public): marco/fondo personalizable y optimizado para la web del QR |

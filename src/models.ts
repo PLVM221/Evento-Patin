@@ -35,6 +35,7 @@ export interface FestivalState {
   name: string
   organizer: string
   organizerLogo: string
+  publicFrame: string
   location: string
   eventDate: string
   startTime: string

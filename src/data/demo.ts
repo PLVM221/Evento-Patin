@@ -4,6 +4,7 @@ export const initialFestival: FestivalState = {
   name: 'Festival Provincial 2026',
   organizer: 'Club Atlético Provincial',
   organizerLogo: '',
+  publicFrame: '',
   location: 'Rosario, Santa Fe',
   eventDate: '2026-08-15',
   startTime: '09:00',

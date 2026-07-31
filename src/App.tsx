@@ -153,7 +153,7 @@ function App() {
       })),
     }
     const buffetSnapshot = { buffetItems: state.buffetItems }
-    const assetSnapshot = { organizerLogo: state.organizerLogo, clubLogos: state.clubLogos }
+    const assetSnapshot = { organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, clubLogos: state.clubLogos }
     const publishTo = (topic: string, payload: object) => fetch(REALTIME_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -708,7 +708,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -724,6 +724,7 @@ function PublicView({ state }: { state: PublicState }) {
   const countdown = useCountdown(live.eventDate, live.startTime)
   const breakCountdown = useRemainingUntil(live.breakEndsAt)
   const byId = new Map(live.skaters.map((skater) => [skater.id, skater]))
+  const frameStyle = live.publicFrame ? { backgroundImage: `linear-gradient(#f3f6fcd9, #f3f6fcd9), url("${live.publicFrame}")` } : undefined
   if (selectedClub) {
     const clubSkaters = live.skaters.filter((skater) => skater.club === selectedClub)
     const clubTeachers = (live.teachers ?? []).filter((teacher) => teacher.club === selectedClub)
@@ -732,7 +733,7 @@ function PublicView({ state }: { state: PublicState }) {
   }
   if (buffetOpen) return <main className="public-view public-subpage"><button className="public-back" onClick={() => setBuffetOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head"><ShoppingBasket /><div><small>PRECIOS DEL EVENTO</small><h1>Bufet</h1></div></header><div className="public-buffet-list">{(live.buffetItems ?? []).map((item) => <article key={item.id}><strong>{item.name}</strong><b>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</b></article>)}{!live.buffetItems?.length && <p>El menú todavía no fue cargado.</p>}</div></main>
   return (
-    <main className="public-view">
+    <main className={`public-view${live.publicFrame ? ' public-framed' : ''}`} style={frameStyle}>
       <div className="public-brand">
         <Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i>
       </div>
