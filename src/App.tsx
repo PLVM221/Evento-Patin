@@ -121,7 +121,6 @@ function App() {
     const snapshot = {
       name: state.name,
       organizer: state.organizer,
-      organizerLogo: state.organizerLogo,
       location: state.location,
       eventDate: state.eventDate,
       startTime: state.startTime,
@@ -132,9 +131,7 @@ function App() {
       breakEndsAt: state.breakEndsAt,
       breakDurationMinutes: state.breakDurationMinutes,
       clubs: state.clubs,
-      clubLogos: state.clubLogos,
       teachers: state.teachers,
-      buffetItems: state.buffetItems,
       activeId: state.activeId,
       stageOrders: Object.fromEntries(
         Array.from({ length: state.stageCount }, (_, index) => {
@@ -153,16 +150,17 @@ function App() {
         stageNumber,
       })),
     }
+    const buffetSnapshot = { buffetItems: state.buffetItems }
+    const assetSnapshot = { organizerLogo: state.organizerLogo, clubLogos: state.clubLogos }
+    const publishTo = (topic: string, payload: object) => fetch('https://ntfy.sh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, title: 'Pista en vivo', message: JSON.stringify(payload) }),
+    })
     const publish = () => {
-      void fetch('https://ntfy.sh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: liveChannel,
-          title: 'Pista en vivo',
-          message: JSON.stringify(snapshot),
-        }),
-      })
+      void publishTo(liveChannel, snapshot)
+      void publishTo(`${liveChannel}-buffet`, buffetSnapshot)
+      if (state.organizerLogo || Object.keys(state.clubLogos).length) void publishTo(`${liveChannel}-assets`, assetSnapshot)
     }
     const timer = window.setTimeout(publish, 350)
     const heartbeat = window.setInterval(publish, 5000)
@@ -735,18 +733,17 @@ function PublicView({ state, channel }: { state: PublicState; channel: string })
         /* mensaje ajeno ignorado */
       }
     }
-    const source = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse?since=latest`)
+    const topics = [channel, `${channel}-buffet`, `${channel}-assets`]
+    const sources = topics.map(topic => new EventSource(`https://ntfy.sh/${encodeURIComponent(topic)}/sse?since=latest`))
+    const source = sources[0]
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
-    source.onmessage = (event) => applyEnvelope(event.data)
+    sources.forEach(item => { item.onmessage = (event) => applyEnvelope(event.data) })
     const poll = window.setInterval(() => {
-      void fetch(`https://ntfy.sh/${encodeURIComponent(channel)}/json?poll=1&since=latest&_=${Date.now()}`)
-        .then((response) => response.text())
-        .then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope))
-        .catch(() => setConnected(false))
+      topics.forEach(topic => { void fetch(`https://ntfy.sh/${encodeURIComponent(topic)}/json?poll=1&since=latest&_=${Date.now()}`).then((response) => response.text()).then((text) => text.trim().split('\n').filter(Boolean).forEach(applyEnvelope)).catch(() => { if (topic === channel) setConnected(false) }) })
     }, 3000)
     return () => {
-      source.close()
+      sources.forEach(item => item.close())
       window.clearInterval(poll)
     }
   }, [channel])

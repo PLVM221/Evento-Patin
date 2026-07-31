@@ -40,3 +40,4 @@
 | 2026-07-31 | fix(public): números de participante ocultos en las fichas QR de clubes |
 | 2026-07-31 | feat(reset): borrado total, bufet visible y escudo del club en participante activa |
 | 2026-07-31 | fix(realtime): QR tolerante a estados anteriores y lectura exclusiva del último mensaje |
+| 2026-07-31 | fix(bufet): sincronización pública separada para evitar límites de tamaño |
