@@ -263,6 +263,7 @@ function App() {
           <div>
             <strong>PISTA</strong>
             <span>Gestión de eventos</span>
+            <small className="brand-developer">Desarrollado por <b>PLVM Soft</b></small>
           </div>
         </div>
         <div className="event-name">

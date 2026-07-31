@@ -35,3 +35,4 @@
 | 2026-07-31 | feat(seños): relación clubes-patinadoras-seños y presentación en operador/QR |
 | 2026-07-31 | feat(clubes): escudos opcionales, iniciales de respaldo y sección Clubes invitados al pie |
 | 2026-07-31 | fix(clubes): organizador separado de invitados con escudo y tarjeta destacada |
+| 2026-07-31 | brand: firma PLVM Soft incorporada a la marca del encabezado |
