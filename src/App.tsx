@@ -18,6 +18,13 @@ function App() {
   const [dark, setDark] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrImage, setQrImage] = useState('')
+  const [liveChannel] = useState(() => {
+    const saved = localStorage.getItem('pista-live-channel')
+    if (saved) return saved
+    const created = `pista-${crypto.randomUUID()}`
+    localStorage.setItem('pista-live-channel', created)
+    return created
+  })
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const customSoundInput = useRef<HTMLInputElement>(null)
   const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
@@ -38,9 +45,17 @@ function App() {
   const stageName = `Etapa ${state.currentStage} de ${state.stageCount}`
   const hasNextStage = state.currentStage < state.stageCount
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
-  const publicUrl = `${window.location.origin}${window.location.pathname}?publico=1`
+  const publicChannel = new URLSearchParams(window.location.search).get('publico')
+  const publicUrl = `${window.location.origin}${window.location.pathname}?publico=${liveChannel}`
 
   useEffect(() => { void QRCode.toDataURL(publicUrl, { width: 280, margin: 1 }).then(setQrImage) }, [publicUrl])
+
+  useEffect(() => {
+    if (publicChannel) return
+    const snapshot = { name: state.name, location: state.location, eventDate: state.eventDate, startTime: state.startTime, stageCount: state.stageCount, currentStage: state.currentStage, started: state.started, activeId: state.activeId, skaters: state.skaters.map(({ id, firstName, lastName, club, track, status }) => ({ id, firstName, lastName, club, track, status })) }
+    const timer = window.setTimeout(() => { void fetch('https://ntfy.sh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: liveChannel, title: 'Pista en vivo', message: JSON.stringify(snapshot) }) }) }, 350)
+    return () => window.clearTimeout(timer)
+  }, [state, liveChannel, publicChannel])
 
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
@@ -113,7 +128,7 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  if (new URLSearchParams(window.location.search).has('publico')) return <PublicView state={state} />
+  if (publicChannel) return <PublicView state={state} channel={publicChannel} />
 
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
@@ -209,12 +224,23 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={event => event.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><small>PARTICIPANTE Nº {skater.number}</small><h2>{fullName(skater)}</h2><p>{skater.club} · {skater.category}</p><div className="modal-track">♫ {skater.track} · {formatTime(skater.duration)}</div><div className="move-position"><label>Etapa<select value={stage} onChange={event => setStage(Number(event.target.value) as StageNumber)}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select></label><label>Posición<input type="number" min="1" max={state.skaters.length} value={position} onChange={event => setPosition(Number(event.target.value))} /></label><button onClick={() => { onMove(skater.id, stage, position); onClose() }}>Mover</button></div><div className="modal-actions">{skater.status === 'ABSENT' ? <button onClick={() => { onStatus(skater.id, 'PENDING'); onClose() }}>Reactivar</button> : <button onClick={() => { onStatus(skater.id, 'ABSENT'); onClose() }}>No se presenta</button>}<button onClick={() => { onStatus(skater.id, 'POSTPONED'); onClose() }}>Posponer</button></div></div></div>
 }
 
-function PublicView({ state }: { state: FestivalState }) {
-  const active = state.skaters.find(skater => skater.id === state.activeId)
-  const pending = state.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'READY')
-  const eventAt = new Date(`${state.eventDate}T${state.startTime}:00`).getTime()
+type PublicState = Pick<FestivalState, 'name' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeId'> & { skaters: Array<Pick<Skater, 'id' | 'firstName' | 'lastName' | 'club' | 'track' | 'status'>> }
+
+function PublicView({ state, channel }: { state: PublicState; channel: string }) {
+  const [live, setLive] = useState<PublicState>(state)
+  const [connected, setConnected] = useState(false)
+  useEffect(() => {
+    const source = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse?since=all`)
+    source.onopen = () => setConnected(true)
+    source.onerror = () => setConnected(false)
+    source.onmessage = event => { try { const envelope = JSON.parse(event.data); if (envelope.event === 'message') setLive(JSON.parse(envelope.message)) } catch { /* mensaje ajeno ignorado */ } }
+    return () => source.close()
+  }, [channel])
+  const active = live.skaters.find(skater => skater.id === live.activeId)
+  const pending = live.skaters.filter(skater => skater.status === 'PENDING' || skater.status === 'READY')
+  const eventAt = new Date(`${live.eventDate}T${live.startTime}:00`).getTime()
   const minutes = Math.max(0, Math.ceil((eventAt - Date.now()) / 60000))
-  return <main className="public-view"><div className="public-brand"><Sparkles /> PISTA EN VIVO</div><h1>{state.name}</h1><p>{state.location} · Etapa {state.currentStage} de {state.stageCount}</p>{!state.started && <div className="public-countdown">Comienza en <strong>{minutes} minutos</strong></div>}<section><small>EN PISTA</small><h2>{active ? fullName(active) : 'En preparación'}</h2>{active && <p>{active.club} · {active.track}</p>}</section><div className="public-columns"><div><small>A CONTINUACIÓN</small><h3>{pending[0] ? fullName(pending[0]) : '—'}</h3><p>{pending[0]?.club}</p></div><div><small>YA PASARON</small><strong>{state.skaters.filter(skater => skater.status === 'FINISHED').length}</strong></div><div><small>RESTANTES</small><strong>{pending.length}</strong></div></div><h3 className="public-list-title">Próximas patinadoras</h3>{pending.slice(1, 8).map((skater, index) => <div className="public-row" key={skater.id}><b>{index + 2}</b><span>{fullName(skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div>)}</main>
+  return <main className="public-view"><div className="public-brand"><Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i></div><h1>{live.name}</h1><p>{live.location} · Etapa {live.currentStage} de {live.stageCount}</p>{!live.started && <div className="public-countdown">Comienza en <strong>{minutes} minutos</strong></div>}<section><small>EN PISTA</small><h2>{active ? fullName(active as Skater) : 'En preparación'}</h2>{active && <p>{active.club} · {active.track}</p>}</section><div className="public-columns"><div><small>A CONTINUACIÓN</small><h3>{pending[0] ? fullName(pending[0] as Skater) : '—'}</h3><p>{pending[0]?.club}</p></div><div><small>YA PASARON</small><strong>{live.skaters.filter(skater => skater.status === 'FINISHED').length}</strong></div><div><small>RESTANTES</small><strong>{pending.length}</strong></div></div><h3 className="public-list-title">Próximas patinadoras</h3>{pending.slice(1, 8).map((skater, index) => <div className="public-row" key={skater.id}><b>{index + 2}</b><span>{fullName(skater as Skater)}<small>{skater.club}</small></span><em>{skater.track}</em></div>)}</main>
 }
 
 export default App
