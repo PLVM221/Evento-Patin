@@ -30,3 +30,4 @@
 | 2026-07-31 | feat(realtime): sincronización SSE temporal entre operador y espectadores |
 | 2026-07-31 | brand: firma Desarrollado por PLVM Soft en panel y vista pública |
 | 2026-07-31 | fix(flow): bloqueo pre-etapa, controles por etapa y polling QR automático |
+| 2026-07-31 | fix(public): club organizador destacado y cuenta regresiva HH:MM:SS en ambas pantallas |
