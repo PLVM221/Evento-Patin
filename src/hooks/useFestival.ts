@@ -41,9 +41,14 @@ export function useFestival() {
   const readOnly = new URLSearchParams(window.location.search).has('publico')
   const history = useRef<FestivalState[]>([])
   const initialState = useRef(state)
-  const cloudReady = useRef(false)
   const applyingRemote = useRef(false)
-  const saveTimer = useRef<number | undefined>(undefined)
+
+  const persist = useCallback(async (next: FestivalState) => {
+    if (readOnly) return
+    setDatabaseStatus('saving')
+    const { error } = await supabase.from('festival_state').upsert({ id: 'current', data: next, updated_at: new Date().toISOString() })
+    setDatabaseStatus(error ? 'error' : 'saved')
+  }, [readOnly])
 
   useEffect(() => {
     let active = true
@@ -56,7 +61,6 @@ export function useFestival() {
       } else if (!error && !readOnly) {
         await supabase.from('festival_state').upsert({ id: 'current', data: initialState.current, updated_at: new Date().toISOString() })
       }
-      cloudReady.current = !error && !readOnly
       setDatabaseStatus(error ? 'error' : 'saved')
     }
     void load()
@@ -74,19 +78,16 @@ export function useFestival() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     if (applyingRemote.current) { applyingRemote.current = false; return }
-    if (!cloudReady.current) return
-    window.clearTimeout(saveTimer.current)
-    setDatabaseStatus('saving')
-    saveTimer.current = window.setTimeout(() => { void supabase.from('festival_state').upsert({ id: 'current', data: state, updated_at: new Date().toISOString() }).then(({ error }) => setDatabaseStatus(error ? 'error' : 'saved')) }, 400)
-    return () => window.clearTimeout(saveTimer.current)
   }, [state])
 
   const update = useCallback((recipe: (current: FestivalState) => FestivalState) => {
     setState(current => {
       history.current = [...history.current.slice(-19), current]
-      return recipe(current)
+      const next = recipe(current)
+      if (next !== current) void persist(next)
+      return next
     })
-  }, [])
+  }, [persist])
 
   const setStatus = (id: string, status: SkaterStatus) => update(current => ({
     ...current,
@@ -220,7 +221,7 @@ export function useFestival() {
 
   const undo = () => {
     const previous = history.current.pop()
-    if (previous) setState(previous)
+    if (previous) { setState(previous); void persist(previous) }
   }
 
   return { state, databaseStatus, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo: history.current.length > 0 }

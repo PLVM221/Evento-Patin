@@ -51,3 +51,4 @@
 | 2026-07-31 | fix(public): contraste y legibilidad de la seño en ficha de club |
 | 2026-07-31 | feat(storage): persistencia multi-equipo y tiempo real preparada con Supabase |
 | 2026-07-31 | fix(storage): QR solo lectura, estado visible de Supabase y botón de escudo legible |
+| 2026-07-31 | fix(storage): escritura directa a Supabase en cada acción del operador |
