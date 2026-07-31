@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, ShoppingBasket, Sparkles, Undo2, Users, Volume2 } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, ShoppingBasket, Sparkles, Trophy, Undo2, Users, Volume2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
@@ -39,7 +39,7 @@ function useRemainingUntil(target?: string) {
 }
 
 function App() {
-  const { state, databaseStatus, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo } = useFestival()
+  const { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setRaffleTicketPrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -575,7 +575,7 @@ function App() {
       </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
-      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onUpdateSkater={updateSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
           <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -708,7 +708,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'raffleTicketPrice' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -717,6 +717,7 @@ function PublicView({ state }: { state: PublicState }) {
   const connected = true
   const [selectedClub, setSelectedClub] = useState<string>()
   const [buffetOpen, setBuffetOpen] = useState(false)
+  const [raffleOpen, setRaffleOpen] = useState(false)
   useEffect(() => setLive(state), [state])
   const active = live.skaters.find((skater) => skater.id === live.activeId)
   const activeTeachers = active ? (live.teachers ?? []).filter((teacher) => teacher.club === active.club) : []
@@ -732,12 +733,14 @@ function PublicView({ state }: { state: PublicState }) {
     return <main className="public-view public-subpage"><button className="public-back" onClick={() => setSelectedClub(undefined)}><ChevronLeft /> Volver</button><header className="club-detail-head"><div className="club-detail-logo">{live.clubLogos?.[selectedClub] ? <img src={live.clubLogos[selectedClub]} alt={`Escudo de ${selectedClub}`} /> : initials}</div><div><small>CLUB INVITADO</small><h1>{selectedClub}</h1></div></header><section className="club-teachers"><small>SEÑO{clubTeachers.length > 1 ? 'S' : ''}</small><strong>{clubTeachers.length ? clubTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></section><h2 className="public-list-title">Patinadoras y orden de pasada</h2><div className="club-skater-list">{clubSkaters.map((skater) => { const stageIds = live.stageOrders[skater.stageNumber] ?? live.skaters.filter((item) => item.stageNumber === skater.stageNumber).map((item) => item.id); const position = stageIds.indexOf(skater.id) + 1; return <article key={skater.id}><div><strong>{fullName(skater as Skater)}</strong><small>{skater.track}</small></div><span>Etapa {skater.stageNumber}<strong>Posición {position}</strong></span></article> })}</div></main>
   }
   if (buffetOpen) return <main className="public-view public-subpage"><button className="public-back" onClick={() => setBuffetOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head"><ShoppingBasket /><div><small>PRECIOS DEL EVENTO</small><h1>Bufet</h1></div></header><div className="public-buffet-list">{(live.buffetItems ?? []).map((item) => <article key={item.id}><strong>{item.name}</strong><b>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</b></article>)}{!live.buffetItems?.length && <p>El menú todavía no fue cargado.</p>}</div></main>
+  if (raffleOpen) return <main className="public-view public-subpage"><button className="public-back" onClick={() => setRaffleOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head raffle-head"><Trophy /><div><small>SORTEO DEL EVENTO</small><h1>Premios</h1></div></header><div className="raffle-ticket-price">Valor del número <strong>{live.raffleTicketPrice ? live.raffleTicketPrice.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'A confirmar'}</strong></div><div className="public-raffle-list">{(live.rafflePrizes ?? []).map((prize, index) => <article key={prize.id}><b>{index + 1}°</b><strong>{prize.name}</strong><span className={prize.winningNumber ? 'winner' : ''}>{prize.winningNumber ? `Ganador: ${prize.winningNumber}` : 'Pendiente de sorteo'}</span></article>)}{!live.rafflePrizes?.length && <p>Los premios todavía no fueron cargados.</p>}</div></main>
   return (
     <main className={`public-view${live.publicFrame ? ' public-framed' : ''}`} style={frameStyle}>
       <div className="public-brand">
         <Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i>
       </div>
       <button className="public-buffet-button" onClick={() => setBuffetOpen(true)}><ShoppingBasket /> Ver precios del bufet</button>
+      <button className="public-raffle-button" onClick={() => setRaffleOpen(true)}><Trophy /> Ver sorteo</button>
       <h1>{live.name}</h1>
       <div className="public-organizer">
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
@@ -787,7 +790,7 @@ function PublicView({ state }: { state: PublicState }) {
         <>
           <section className="public-now">
             <small>EN PISTA</small>
-            <div className="public-active-main">{active && <div className="public-active-logo">{live.clubLogos?.[active.club] ? <img src={live.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div>}<h2>{active ? fullName(active as Skater) : 'En preparación'}</h2></div>
+            <div className="public-active-main">{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div>}<h2>{active ? fullName(active as Skater) : 'En preparación'}</h2></div>
             {active && (
               <p>
                 {active.club} · {active.track}

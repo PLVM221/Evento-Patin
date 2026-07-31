@@ -57,3 +57,6 @@
 | 2026-07-31 | fix(storage): cola serial de escrituras y polling exclusivo de la vista QR |
 | 2026-07-31 | fix(media): compresión WebP de escudos para evitar estados Supabase de varios MB |
 | 2026-07-31 | feat(public): marco/fondo personalizable y optimizado para la web del QR |
+| 2026-07-31 | feat(eventos): copias completas guardadas y restaurables desde Supabase |
+| 2026-07-31 | feat(sorteo): precio, premios, ganadores y consulta desde la web QR |
+| 2026-07-31 | fix(public): escudo organizador en pista, tarjeta móvil ordenada y reanudación al desbloquear |

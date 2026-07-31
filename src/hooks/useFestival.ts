@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { initialFestival } from '../data/demo'
 import { supabase } from '../lib/supabase'
-import type { FestivalState, SkaterStatus, StageNumber } from '../models'
+import type { FestivalState, SavedEvent, SkaterStatus, StageNumber } from '../models'
 
 const STORAGE_KEY = 'pista-festival-state-v1'
 
@@ -19,6 +19,8 @@ const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStage
       clubLogos: parsed.clubLogos ?? {},
       teachers: parsed.teachers ?? [],
       buffetItems: parsed.buffetItems ?? [],
+      raffleTicketPrice: parsed.raffleTicketPrice ?? 0,
+      rafflePrizes: parsed.rafflePrizes ?? [],
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
         stageNumber: skater.stageNumber ?? 1,
@@ -39,12 +41,19 @@ const restore = (): FestivalState => {
 export function useFestival() {
   const [state, setState] = useState<FestivalState>(restore)
   const [databaseStatus, setDatabaseStatus] = useState<'connecting' | 'saving' | 'saved' | 'error'>('connecting')
+  const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([])
   const readOnly = new URLSearchParams(window.location.search).has('publico')
   const history = useRef<FestivalState[]>([])
   const initialState = useRef(state)
   const applyingRemote = useRef(false)
   const pendingSave = useRef<FestivalState | null>(null)
   const saving = useRef(false)
+
+  const loadSavedEvents = useCallback(async () => {
+    if (readOnly) return
+    const { data } = await supabase.from('festival_state').select('id,data,updated_at').like('id', 'saved-%').order('updated_at', { ascending: false })
+    setSavedEvents((data ?? []).map(row => ({ id: row.id, name: String((row.data as { name?: string })?.name || 'Evento sin nombre'), savedAt: row.updated_at })))
+  }, [readOnly])
 
   const persist = useCallback((next: FestivalState) => {
     if (readOnly) return
@@ -84,6 +93,7 @@ export function useFestival() {
       setDatabaseStatus(error ? 'error' : 'saved')
     }
     void load()
+    void loadSavedEvents()
     const poll = readOnly ? window.setInterval(() => void load(), 5000) : undefined
     const channel = supabase.channel('festival-state-live').on('postgres_changes', { event: '*', schema: 'public', table: 'festival_state', filter: 'id=eq.current' }, payload => {
       const row = payload.new as { data?: Partial<FestivalState> }
@@ -92,8 +102,12 @@ export function useFestival() {
         setState(normalize(row.data))
       }
     }).subscribe()
-    return () => { active = false; if (poll) window.clearInterval(poll); void supabase.removeChannel(channel) }
-  }, [readOnly])
+    const resume = () => { if (document.visibilityState === 'visible') void load() }
+    document.addEventListener('visibilitychange', resume)
+    window.addEventListener('pageshow', resume)
+    window.addEventListener('focus', resume)
+    return () => { active = false; if (poll) window.clearInterval(poll); document.removeEventListener('visibilitychange', resume); window.removeEventListener('pageshow', resume); window.removeEventListener('focus', resume); void supabase.removeChannel(channel) }
+  }, [readOnly, loadSavedEvents])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
@@ -227,7 +241,32 @@ export function useFestival() {
 
   const removeBuffetItem = (id: string) => update(current => ({ ...current, buffetItems: current.buffetItems.filter(item => item.id !== id) }))
 
-  const clearFestival = () => update(current => ({ ...current, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], skaters: [], activeId: undefined, elapsed: 0 }))
+  const setRaffleTicketPrice = (price: number) => update(current => ({ ...current, raffleTicketPrice: Math.max(0, price) }))
+
+  const addRafflePrize = (name: string) => update(current => ({ ...current, rafflePrizes: [...current.rafflePrizes, { id: crypto.randomUUID(), name, winningNumber: '' }] }))
+
+  const updateRafflePrize = (id: string, values: Partial<FestivalState['rafflePrizes'][number]>) => update(current => ({ ...current, rafflePrizes: current.rafflePrizes.map(prize => prize.id === id ? { ...prize, ...values } : prize) }))
+
+  const removeRafflePrize = (id: string) => update(current => ({ ...current, rafflePrizes: current.rafflePrizes.filter(prize => prize.id !== id) }))
+
+  const saveEvent = async () => {
+    const id = `saved-${crypto.randomUUID()}`
+    const { error } = await supabase.from('festival_state').insert({ id, data: state, updated_at: new Date().toISOString() })
+    if (error) { setDatabaseStatus('error'); return false }
+    await loadSavedEvents()
+    return true
+  }
+
+  const restoreEvent = async (id: string) => {
+    const { data, error } = await supabase.from('festival_state').select('data').eq('id', id).maybeSingle()
+    if (error || !data?.data) { setDatabaseStatus('error'); return false }
+    const restored = normalize(data.data as Partial<FestivalState>)
+    setState(restored)
+    persist(restored)
+    return true
+  }
+
+  const clearFestival = () => update(current => ({ ...current, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], raffleTicketPrice: 0, rafflePrizes: [], skaters: [], activeId: undefined, elapsed: 0 }))
 
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
     const ids = [...(current.stageOrders[stage] ?? current.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id))].filter(skaterId => skaterId !== id)
@@ -244,5 +283,5 @@ export function useFestival() {
     if (previous) { setState(previous); persist(previous) }
   }
 
-  return { state, databaseStatus, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, savedEvents, saveEvent, restoreEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, updateSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setRaffleTicketPrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
 }
