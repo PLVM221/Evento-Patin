@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
-import { Headphones, Music2, Plus, Settings2, ShoppingBasket, Trophy, Users, X } from 'lucide-react'
+import { Headphones, Music2, Plus, Save, Settings2, ShoppingBasket, Trophy, Users, X } from 'lucide-react'
 import type { FestivalState, SavedEvent, Skater } from '../models'
 import { fullName } from '../models'
 
-type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'audios'
+type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'copias' | 'audios'
 
 const optimizeImage = (file: File, done: (value: string) => void) => {
   const reader = new FileReader()
@@ -78,15 +78,17 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           <button className={tab === 'clubes' ? 'selected' : ''} onClick={() => setTab('clubes')}><Users /> Clubes</button>
           <button className={tab === 'bufet' ? 'selected' : ''} onClick={() => setTab('bufet')}><ShoppingBasket /> Bufet</button>
           <button className={tab === 'sorteo' ? 'selected' : ''} onClick={() => setTab('sorteo')}><Trophy /> Sorteo</button>
+          <button className={tab === 'copias' ? 'selected' : ''} onClick={() => setTab('copias')}><Save /> Copias</button>
           <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>
         </nav>
         <div className="admin-content">
-          {tab === 'evento' && <EventForm state={state} savedEvents={savedEvents} onSave={onUpdateEvent} onSaveEvent={onSaveEvent} onRestoreEvent={onRestoreEvent} onClearAll={onClearAll} />}
+          {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
           {tab === 'sorteo' && <RaffleAdmin state={state} onSetPrice={onSetRaffleTicketPrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
+          {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
       </section>
@@ -94,7 +96,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
   )
 }
 
-function EventForm({ state, savedEvents, onSave, onSaveEvent, onRestoreEvent, onClearAll }: { state: FestivalState; savedEvents: SavedEvent[]; onSave: Props['onUpdateEvent']; onSaveEvent: Props['onSaveEvent']; onRestoreEvent: Props['onRestoreEvent']; onClearAll: Props['onClearAll'] }) {
+function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave: Props['onUpdateEvent']; onClearAll: Props['onClearAll'] }) {
   const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount })
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(values) }
   return <form className="admin-form" onSubmit={submit}>
@@ -107,7 +109,6 @@ function EventForm({ state, savedEvents, onSave, onSaveEvent, onRestoreEvent, on
     <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial de cada patinadora.</small></label>
     <label>Duración de cada receso (minutos)<input type="number" min="1" required value={values.breakDurationMinutes} onChange={event => setValues({ ...values, breakDurationMinutes: Number(event.target.value) })} /><small className="field-help">Se usa para calcular la cuenta regresiva y la hora de finalización.</small></label>
     <button className="primary-save">Guardar cambios</button>
-    <div className="saved-events"><div><strong>Copias guardadas del evento</strong><small>Guardá toda la configuración para recuperarla aun después de borrar el evento actual.</small></div><button type="button" onClick={() => void onSaveEvent()}>Guardar copia ahora</button>{savedEvents.map(saved => <div className="saved-event-row" key={saved.id}><span><b>{saved.name}</b><small>{new Date(saved.savedAt).toLocaleString('es-AR')}</small></span><button type="button" onClick={() => window.confirm(`¿Restaurar ${saved.name}? Reemplazará el evento actual.`) && void onRestoreEvent(saved.id)}>Restaurar</button></div>)}</div>
     <div className="danger-zone"><div><strong>Borrar todo el evento</strong><small>Elimina patinadoras, clubes, seños, bufet, etapas y resultados para comenzar desde cero.</small></div><button type="button" onClick={() => window.confirm('¿Borrar absolutamente todos los datos del evento? Esta acción no se puede deshacer.') && window.confirm('Última confirmación: ¿querés dejar el sistema completamente en blanco?') && onClearAll()}>BORRAR TODO</button></div>
   </form>
 }
@@ -159,6 +160,12 @@ function BuffetAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalStat
 function RaffleAdmin({ state, onSetPrice, onAdd, onUpdate, onRemove }: { state: FestivalState; onSetPrice: Props['onSetRaffleTicketPrice']; onAdd: Props['onAddRafflePrize']; onUpdate: Props['onUpdateRafflePrize']; onRemove: Props['onRemoveRafflePrize'] }) {
   const [prize, setPrize] = useState('')
   return <div><div className="admin-intro"><h3>Sorteo</h3><p>Configurá el valor de los números, los premios y publicá cada número ganador.</p></div><label className="raffle-price">Valor de cada número<input type="number" min="0" step="1" value={state.raffleTicketPrice || ''} onChange={event => onSetPrice(Number(event.target.value))} /></label><form className="raffle-add" onSubmit={event => { event.preventDefault(); if (prize.trim()) { onAdd(prize.trim()); setPrize('') } }}><input placeholder="Premio (ej.: Canasta de productos)" required value={prize} onChange={event => setPrize(event.target.value)} /><button><Plus /> Agregar premio</button></form><div className="raffle-admin-list">{state.rafflePrizes.map((item, index) => <div key={item.id}><b>{index + 1}°</b><input aria-label={`Premio ${index + 1}`} value={item.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /><input aria-label={`Número ganador del premio ${index + 1}`} placeholder="N.º ganador" value={item.winningNumber} onChange={event => onUpdate(item.id, { winningNumber: event.target.value })} /><button onClick={() => onRemove(item.id)}>Eliminar</button></div>)}</div></div>
+}
+
+function BackupAdmin({ state, savedEvents, onSave, onRestore }: { state: FestivalState; savedEvents: SavedEvent[]; onSave: Props['onSaveEvent']; onRestore: Props['onRestoreEvent'] }) {
+  const [message, setMessage] = useState('')
+  const save = async () => setMessage(await onSave() ? 'Copia guardada correctamente en Supabase.' : 'No se pudo guardar la copia.')
+  return <div><div className="admin-intro"><h3>Copias de seguridad</h3><p>Guardá el evento completo y recuperalo si se borran datos o se modifica algo por error.</p></div><div className="backup-current"><Save /><div><small>EVENTO ACTUAL</small><strong>{state.name || 'Evento sin nombre'}</strong><span>{state.skaters.length} patinadoras · {state.clubs.length} clubes · {state.teachers.length} seños</span></div><button onClick={() => void save()}>Guardar copia ahora</button></div>{message && <p className="backup-message">{message}</p>}<div className="saved-events"><div><strong>Copias guardadas en Supabase</strong><small>No se eliminan cuando usás “Borrar todo”.</small></div>{savedEvents.length ? savedEvents.map(saved => <div className="saved-event-row" key={saved.id}><span><b>{saved.name}</b><small>Guardada: {new Date(saved.savedAt).toLocaleString('es-AR')}</small></span><button type="button" onClick={() => window.confirm(`¿Restaurar ${saved.name}? Reemplazará el evento actual.`) && void onRestore(saved.id)}>Restaurar copia</button></div>) : <p className="backup-empty">Todavía no hay copias guardadas.</p>}</div></div>
 }
 
 function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props['onUpdateSkater'] }) {
