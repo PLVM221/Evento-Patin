@@ -5,6 +5,23 @@ import { fullName } from '../models'
 
 type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'audios'
 
+const optimizeImage = (file: File, done: (value: string) => void) => {
+  const reader = new FileReader()
+  reader.onload = () => {
+    const image = new Image()
+    image.onload = () => {
+      const scale = Math.min(1, 160 / Math.max(image.width, image.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(image.width * scale))
+      canvas.height = Math.max(1, Math.round(image.height * scale))
+      canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
+      done(canvas.toDataURL('image/webp', 0.78))
+    }
+    image.src = String(reader.result)
+  }
+  reader.readAsDataURL(file)
+}
+
 interface Props {
   state: FestivalState
   onClose: () => void
@@ -57,7 +74,7 @@ function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave
   return <form className="admin-form" onSubmit={submit}>
     <div className="admin-intro"><h3>Datos del evento</h3><p>Estos datos aparecen en el panel del operador.</p></div>
     <label>Nombre del evento<input required value={values.name} onChange={event => setValues({ ...values, name: event.target.value })} /></label>
-    <div className="organizer-admin"><div className="organizer-logo-preview">{values.organizerLogo ? <img src={values.organizerLogo} alt="Escudo del club organizador" /> : values.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div><label>Club organizador<input required value={values.organizer} onChange={event => setValues({ ...values, organizer: event.target.value })} /></label><label className="file-btn">{values.organizerLogo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setValues(current => ({ ...current, organizerLogo: String(reader.result) })); reader.readAsDataURL(file) }} /></label></div>
+    <div className="organizer-admin"><div className="organizer-logo-preview">{values.organizerLogo ? <img src={values.organizerLogo} alt="Escudo del club organizador" /> : values.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div><label>Club organizador<input required value={values.organizer} onChange={event => setValues({ ...values, organizer: event.target.value })} /></label><label className="file-btn">{values.organizerLogo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeImage(file, organizerLogo => setValues(current => ({ ...current, organizerLogo }))) }} /></label></div>
     <label>Ubicación<input required placeholder="Ciudad, provincia" value={values.location} onChange={event => setValues({ ...values, location: event.target.value })} /></label>
     <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => setValues({ ...values, eventDate: event.target.value })} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => setValues({ ...values, startTime: event.target.value })} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => setValues({ ...values, countdownMinutes: Number(event.target.value) })} /></label></div>
     <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial de cada patinadora.</small></label>
@@ -101,7 +118,7 @@ function ClubAdmin({ clubs, logos, onRename, onAdd, onLogo }: { clubs: string[];
 function ClubRow({ club, logo, onRename, onLogo }: { club: string; logo?: string; onRename: Props['onRenameClub']; onLogo: Props['onUpdateClubLogo'] }) {
   const [name, setName] = useState(club)
   const initials = club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()
-  return <div className="club-admin-row"><div className="club-logo-preview">{logo ? <img src={logo} alt={`Escudo de ${club}`} /> : initials}</div><input value={name} onChange={event => setName(event.target.value)} /><label className="file-btn">{logo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => onLogo(club, String(reader.result)); reader.readAsDataURL(file) }} /></label><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button></div>
+  return <div className="club-admin-row"><div className="club-logo-preview">{logo ? <img src={logo} alt={`Escudo de ${club}`} /> : initials}</div><input value={name} onChange={event => setName(event.target.value)} /><label className="file-btn">{logo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeImage(file, value => onLogo(club, value)) }} /></label><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button></div>
 }
 
 function BuffetAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddBuffetItem']; onUpdate: Props['onUpdateBuffetItem']; onRemove: Props['onRemoveBuffetItem'] }) {
