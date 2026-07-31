@@ -60,3 +60,4 @@
 | 2026-07-31 | feat(eventos): copias completas guardadas y restaurables desde Supabase |
 | 2026-07-31 | feat(sorteo): precio, premios, ganadores y consulta desde la web QR |
 | 2026-07-31 | fix(public): escudo organizador en pista, tarjeta móvil ordenada y reanudación al desbloquear |
+| 2026-07-31 | fix(admin): contraste y visibilidad del botón para cargar/cambiar marco QR |
