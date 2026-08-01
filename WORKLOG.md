@@ -101,3 +101,6 @@
 | 21:58 | docs(agents): reglas persistentes para leer `Proyecto.md` y `WORKLOG.md` al iniciar |
 | 21:59 | git: PR #4 fusionado con reglas persistentes de agentes; deploy verificado |
 | 22:00 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK en cambios funcionales |
+| 22:14 | feat(admin): botÃ³n funcional `Guardar cambios` visible en todas las solapas, con confirmaciÃ³n de nube, modo offline y error |
+| 22:14 | feat(sync): guardado manual crea una revisiÃ³n y entrada de auditorÃ­a sin desactivar el guardado automÃ¡tico |
+| 22:14 | test: `npm run lint`, `npm test` y `npm run build` OK para el guardado manual |

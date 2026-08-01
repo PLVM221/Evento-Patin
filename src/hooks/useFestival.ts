@@ -204,6 +204,22 @@ export function useFestival(userId = 'public') {
     })
   }, [persist])
 
+  const saveNow = useCallback(async (): Promise<'saved' | 'offline' | 'error'> => {
+    const next = {
+      ...state,
+      revision: state.revision + 1,
+      auditLog: [...state.auditLog, { id: createId(), at: new Date().toISOString(), action: 'Guardar cambios', detail: 'Guardado manual desde el panel de administración' }].slice(-200),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutRuntimeAudio(next)))
+    setState(next)
+    persist(next)
+    if (!navigator.onLine && offlineEnabled) return 'offline'
+
+    const deadline = Date.now() + 10000
+    while ((saving.current || pendingSave.current) && Date.now() < deadline) await new Promise(resolve => window.setTimeout(resolve, 50))
+    return saving.current || pendingSave.current ? 'error' : 'saved'
+  }, [offlineEnabled, persist, state])
+
   const setStatus = (id: string, status: SkaterStatus) => update(current => {
     const target = current.skaters.find(skater => skater.id === id)
     if (!target || !canTransitionStatus(target.status, status)) return current
@@ -413,5 +429,5 @@ export function useFestival(userId = 'public') {
     if (previous) { setState(previous); persist(previous) }
   }
 
-  return { state, databaseStatus, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, removeClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, saveNow, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, removeClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
 }
