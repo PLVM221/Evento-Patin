@@ -342,9 +342,9 @@ function OperatorApp({ userId }: { userId: string }) {
           <div className="estimate">
             <span>
               <small>FINAL ESTIMADO</small>
-              <strong>{estimatedFinish.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</strong>
+              <strong>{estimatedFinish.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' })}</strong>
             </span>
-            <em>Estimado · 45 s entre pasadas</em>
+            <em>45 s entre pasadas</em>
           </div>
           <div className="search-wrap">
             <label className="search">
