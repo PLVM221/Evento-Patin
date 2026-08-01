@@ -74,4 +74,30 @@
 
 | Hora | Cambio |
 |------|--------|
-| 21:59 | docs(agents): reglas persistentes para leer `Proyecto.md` y `WORKLOG.md` al iniciar |
+| 19:54 | backup: snapshot previo a mejoras guardado en `backups/evento-patin-pre-mejoras-20260731.zip` |
+| 20:05 | feat(auth): acceso de operadores con Supabase Auth y aislamiento de estado por usuario |
+| 20:05 | security(rls): políticas anónimas eliminadas, propiedad por `owner_id` y función de escritura protegida |
+| 20:05 | feat(sync): revisiones optimistas, detección de conflictos y elección entre copia local o remota |
+| 20:05 | feat(audio): canciones persistentes en IndexedDB, preflight, validación y duración automática |
+| 20:05 | feat(player): parada de emergencia con fade y manejo de errores de reproducción |
+| 20:05 | feat(operator): estimación dinámica de finalización y bloqueo de suspensión de pantalla |
+| 20:05 | feat(import): alta masiva de patinadoras por CSV con validación de columnas y valores |
+| 20:05 | feat(backups): exportación/importación JSON y auditoría de actividad reciente |
+| 20:05 | refactor(config): variables de entorno para Supabase y relay público documentadas |
+| 20:05 | test(domain): pruebas automáticas para estimación horaria y preflight de audios |
+| 20:05 | chore(deps): lockfile reparado, Node LTS portable y auditoría npm con 0 vulnerabilidades |
+| 20:24 | fix(lan): servidor dev expuesto en `0.0.0.0` para acceso desde celular por Wi-Fi |
+| 20:32 | fix(compat): generador UUID compatible con navegadores sin contexto HTTPS seguro |
+| 20:46 | auth(operator): usuario operador creado y confirmación de correo solicitada sin registrar credenciales |
+| 21:05 | db(migrations): proyecto Supabase vinculado y migraciones normalizadas con timestamps únicos |
+| 21:05 | db(deploy): tabla base, RLS y escritura conflict-aware aplicadas; remoto verificado al día |
+| 21:10 | git: PR #1 fusionado con seguridad, offline, audios, imports, backups y tests |
+| 21:10 | deploy(pages): publicación principal completada y URL productiva verificada con HTTP 200 |
+| 21:35 | fix(ui): estadísticas, botones superiores y controles responsive alineados |
+| 21:35 | feat(clubes): eliminación segura de clubes sin personas vinculadas |
+| 21:40 | git: PR #2 fusionado y despliegue GitHub Pages verificado |
+| 21:50 | fix(time): horario estimado en formato 24 horas, sin salto de línea y bloque compacto |
+| 21:52 | git: PR #3 fusionado y despliegue GitHub Pages verificado |
+| 21:58 | docs(agents): reglas persistentes para leer `Proyecto.md` y `WORKLOG.md` al iniciar |
+| 21:59 | git: PR #4 fusionado con reglas persistentes de agentes; deploy verificado |
+| 22:00 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK en cambios funcionales |
