@@ -321,6 +321,13 @@ export function useFestival(userId = 'public') {
 
   const addClub = (name: string) => update(current => current.clubs.some(club => club.toLowerCase() === name.toLowerCase()) ? current : ({ ...current, clubs: [...current.clubs, name].sort() }))
 
+  const removeClub = (name: string) => update(current => {
+    if (current.skaters.some(skater => skater.club === name) || current.teachers.some(teacher => teacher.club === name)) return current
+    const clubLogos = { ...current.clubLogos }
+    delete clubLogos[name]
+    return { ...current, clubLogos, clubs: current.clubs.filter(club => club !== name) }
+  }, 'Eliminar club', `Se eliminó el club ${name}`)
+
   const updateClubLogo = (club: string, logo: string) => update(current => ({ ...current, clubLogos: { ...current.clubLogos, [club]: logo } }))
 
   const addTeacher = (name: string, club: string) => update(current => ({ ...current, teachers: [...current.teachers, { id: createId(), name, club }] }))
@@ -406,5 +413,5 @@ export function useFestival(userId = 'public') {
     if (previous) { setState(previous); persist(previous) }
   }
 
-  return { state, databaseStatus, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
+  return { state, databaseStatus, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, removeClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo: history.current.length > 0 }
 }

@@ -43,7 +43,7 @@ function useRemainingUntil(target?: string) {
 }
 
 function OperatorApp({ userId }: { userId: string }) {
-  const { state, databaseStatus, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival(userId)
+  const { state, databaseStatus, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, removeClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival(userId)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
@@ -300,7 +300,7 @@ function OperatorApp({ userId }: { userId: string }) {
           <button title="QR para espectadores" aria-label="QR para espectadores" onClick={() => setQrOpen(true)}>
             <QrCode />
           </button>
-          <button title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void supabase.auth.signOut()}>SALIR</button>
+          <button className="logout-header" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void supabase.auth.signOut()}>SALIR</button>
           <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}>
             <RefreshCcw />
             <span>REINICIAR</span>
@@ -592,7 +592,7 @@ function OperatorApp({ userId }: { userId: string }) {
       </footer>
 
       {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
-      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onImportSkaters={importSkaters} onImportEvent={importEvent} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetPublicSectionVisibility={setPublicSectionVisibility} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onDeleteSavedEvent={deleteSavedEvent} offlineEnabled={offlineEnabled} onSetOfflineMode={setOfflineMode} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
+      {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onImportSkaters={importSkaters} onImportEvent={importEvent} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onRemoveClub={removeClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetPublicSectionVisibility={setPublicSectionVisibility} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onRestoreEvent={restoreEvent} onDeleteSavedEvent={deleteSavedEvent} offlineEnabled={offlineEnabled} onSetOfflineMode={setOfflineMode} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
           <div className="modal qr-modal" onMouseDown={(event) => event.stopPropagation()}>
