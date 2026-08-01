@@ -385,7 +385,7 @@ export function useFestival(userId = 'public') {
 
   const saveEvent = async () => {
     const { error } = await supabase.rpc('save_festival_backup', { p_data: withoutRuntimeAudio(state), p_revision: state.revision })
-    if (error) { setDatabaseStatus('error'); return false }
+    if (error) { setDatabaseStatus('error'); window.alert(`Error Supabase al guardar copia: ${error.message} (${error.code})`); return false }
     await loadSavedEvents()
     return true
   }
