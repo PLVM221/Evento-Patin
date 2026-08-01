@@ -44,7 +44,7 @@ const optimizeFrame = (file: File, done: (value: string) => void) => {
 interface Props {
   state: FestivalState
   onClose: () => void
-  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) => void
+  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount' | 'useHeats'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onImportSkaters: (skaters: Array<Omit<Skater, 'id' | 'status'>>) => void
   onImportEvent: (value: unknown) => void
@@ -126,7 +126,7 @@ function VisibilityToggle({ checked, title, onChange }: { checked: boolean; titl
 }
 
 function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave: Props['onUpdateEvent']; onClearAll: Props['onClearAll'] }) {
-  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount })
+  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount, useHeats: state.useHeats })
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(values) }
   return <form className="admin-form" onSubmit={submit}>
     <div className="admin-intro"><h3>Datos del evento</h3><p>Estos datos aparecen en el panel del operador.</p></div>
@@ -136,6 +136,7 @@ function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave
     <label>Ubicación<input required placeholder="Ciudad, provincia" value={values.location} onChange={event => setValues({ ...values, location: event.target.value })} /></label>
     <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => setValues({ ...values, eventDate: event.target.value })} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => setValues({ ...values, startTime: event.target.value })} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => setValues({ ...values, countdownMinutes: Number(event.target.value) })} /></label></div>
     <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial de cada patinadora.</small></label>
+    <label className="public-visibility"><input type="checkbox" checked={values.useHeats} onChange={event => setValues({ ...values, useHeats: event.target.checked })} /><span><strong>Usar tandas</strong><small>Desactivado: todas las patinadoras quedan en Tanda 1.</small></span></label>
     <label>Duración de cada receso (minutos)<input type="number" min="1" required value={values.breakDurationMinutes} onChange={event => setValues({ ...values, breakDurationMinutes: Number(event.target.value) })} /><small className="field-help">Se usa para calcular la cuenta regresiva y la hora de finalización.</small></label>
     <button className="primary-save">Guardar cambios</button>
     <div className="danger-zone"><div><strong>Borrar todo el evento</strong><small>Elimina patinadoras, clubes, seños, bufet, etapas y resultados para comenzar desde cero.</small></div><button type="button" onClick={() => window.confirm('¿Borrar absolutamente todos los datos del evento? Esta acción no se puede deshacer.') && window.confirm('Última confirmación: ¿querés dejar el sistema completamente en blanco?') && onClearAll()}>BORRAR TODO</button></div>
@@ -152,7 +153,7 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
       const lines = (await file.text()).replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean)
       const rows = lines.slice(1).map(line => line.split(';').map(cell => cell.trim().replace(/^"|"$/g, '')))
       rows.forEach((row, index) => validateCsvRow(row, index + 2))
-      onImport(rows.map(row => ({ number: Number(row[0]), firstName: row[1], lastName: row[2], club: row[3], category: row[4], stageNumber: Number(row[5]) as Skater['stageNumber'], track: row[6] || 'Sin especificar', duration: Number(row[7]) || 180, heat: row[8] || 'Tanda 1', notes: '' })))
+      onImport(rows.map(row => ({ number: Number(row[0]), firstName: row[1], lastName: row[2], club: row[3], category: row[4], stageNumber: Number(row[5]) as Skater['stageNumber'], track: row[6] || 'Sin especificar', duration: Number(row[7]) || 180, heat: state.useHeats ? (row[8] || 'Tanda 1') : 'Tanda 1', notes: '' })))
       window.alert(`${rows.length} patinadoras importadas correctamente.`)
     } catch (error) { window.alert(error instanceof Error ? error.message : 'No se pudo importar el archivo.') }
   }
@@ -164,7 +165,7 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
       <input placeholder="Apellido" required value={form.lastName} onChange={event => setForm({ ...form, lastName: event.target.value })} />
       <select aria-label="Club" required value={form.club} onChange={event => setForm({ ...form, club: event.target.value })}><option value="">Seleccionar club</option>{state.clubs.map(club => <option key={club}>{club}</option>)}</select>
       <input placeholder="Coreografía / canción" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
-      <select value={form.heat} onChange={event => setForm({ ...form, heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select>
+      {state.useHeats && <select value={form.heat} onChange={event => setForm({ ...form, heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select>}
       <select aria-label="Etapa" value={form.stageNumber} onChange={event => setForm({ ...form, stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select>
       <button><Plus /> Agregar</button>
     </form>

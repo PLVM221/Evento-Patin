@@ -74,6 +74,7 @@ export interface FestivalState {
   activeBreakAfter?: StageNumber
   breakEndsAt?: string
   stageCount: StageNumber
+  useHeats: boolean
   currentStage: StageNumber
   completedStages: StageNumber[]
   stageOrders: Partial<Record<StageNumber, string[]>>
