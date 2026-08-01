@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 22:55 | fix(sync): guardado manual reconcilia revision remota y sube autoritativamente la copia visible |
 | 14:32 | feat(dashboard): MVP modular del panel de conducción en vivo |
 | 14:32 | feat(state): estados centralizados, avance seguro, autosave y deshacer |
 | 14:32 | feat(ui): cola editable, búsqueda, reproductor, soundboard y responsive |
