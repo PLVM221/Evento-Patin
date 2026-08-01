@@ -384,8 +384,7 @@ export function useFestival(userId = 'public') {
   const removeRafflePrize = (id: string) => update(current => ({ ...current, rafflePrizes: current.rafflePrizes.filter(prize => prize.id !== id) }))
 
   const saveEvent = async () => {
-    const id = `${backupPrefix}${createId()}`
-    const { error } = await supabase.from('festival_state').insert({ id, owner_id: userId, data: withoutRuntimeAudio(state), revision: state.revision, updated_at: new Date().toISOString() })
+    const { error } = await supabase.rpc('save_festival_backup', { p_data: withoutRuntimeAudio(state), p_revision: state.revision })
     if (error) { setDatabaseStatus('error'); return false }
     await loadSavedEvents()
     return true

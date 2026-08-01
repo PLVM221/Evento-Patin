@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 23:15 | fix(backups): copias en Supabase usan funcion segura autenticada y dejan de fallar por RLS |
 | 22:55 | fix(sync): guardado manual reconcilia revision remota y sube autoritativamente la copia visible |
 | 14:32 | feat(dashboard): MVP modular del panel de conducción en vivo |
 | 14:32 | feat(state): estados centralizados, avance seguro, autosave y deshacer |
