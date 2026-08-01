@@ -50,6 +50,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const [dark, setDark] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrImage, setQrImage] = useState('')
+  const [relayState, setRelayState] = useState<Partial<PublicState>>({})
   const [liveChannel] = useState(() => {
     const saved = localStorage.getItem('pista-live-channel')
     if (saved) return saved
@@ -146,6 +147,13 @@ function OperatorApp({ userId }: { userId: string }) {
       activeBreakAfter: state.activeBreakAfter,
       breakEndsAt: state.breakEndsAt,
       breakDurationMinutes: state.breakDurationMinutes,
+      showBuffet: state.showBuffet,
+      showRaffle: state.showRaffle,
+      useFrameOnBuffet: state.useFrameOnBuffet,
+      useFrameOnRaffle: state.useFrameOnRaffle,
+      raffleTicketPrice: state.raffleTicketPrice,
+      rafflePrices: state.rafflePrices,
+      rafflePrizes: state.rafflePrizes,
       clubs: state.clubs,
       teachers: state.teachers,
       activeId: state.activeId,
@@ -183,6 +191,23 @@ function OperatorApp({ userId }: { userId: string }) {
       window.clearTimeout(timer)
     }
   }, [state, liveChannel, publicChannel])
+
+  useEffect(() => {
+    if (!publicChannel) return
+    const subscribe = (topic: string) => {
+      const source = new EventSource(`${REALTIME_BASE}/${encodeURIComponent(topic)}/sse?since=1h`)
+      source.onmessage = (event) => {
+        try {
+          const envelope = JSON.parse(event.data) as { event?: string; message?: string }
+          if (envelope.event !== 'message' || !envelope.message) return
+          setRelayState((current) => ({ ...current, ...JSON.parse(envelope.message) as Partial<PublicState> }))
+        } catch { /* Ignorar mensajes ajenos al estado del evento. */ }
+      }
+      return source
+    }
+    const sources = [subscribe(publicChannel), subscribe(`${publicChannel}-buffet`), subscribe(`${publicChannel}-assets`)]
+    return () => sources.forEach((source) => source.close())
+  }, [publicChannel])
 
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
@@ -265,7 +290,7 @@ function OperatorApp({ userId }: { userId: string }) {
     URL.revokeObjectURL(url)
   }
 
-  if (publicChannel) return <PublicView state={state} />
+  if (publicChannel) return <PublicView state={{ ...state, ...relayState }} />
 
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
