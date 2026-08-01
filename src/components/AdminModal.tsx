@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
-import { Headphones, Music2, Plus, Save, Settings2, ShoppingBasket, Trophy, Users, X } from 'lucide-react'
+import { Headphones, Music2, Plus, Save, Settings2, ShoppingBasket, Trash2, Trophy, Users, X } from 'lucide-react'
 import type { FestivalState, SavedEvent, Skater } from '../models'
 import { fullName } from '../models'
 import { removeTrack, saveTrack } from '../lib/audioStore'
@@ -52,6 +52,7 @@ interface Props {
   onRemoveSkater: (id: string) => void
   onRenameClub: (from: string, to: string) => void
   onAddClub: (name: string) => void
+  onRemoveClub: (name: string) => void
   onUpdateClubLogo: (club: string, logo: string) => void
   onAddTeacher: (name: string, club: string) => void
   onRemoveTeacher: (id: string) => void
@@ -74,7 +75,7 @@ interface Props {
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onRemoveClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -101,7 +102,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
-          {tab === 'clubes' && <ClubAdmin clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onLogo={onUpdateClubLogo} />}
+          {tab === 'clubes' && <ClubAdmin state={state} clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onRemove={onRemoveClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
           {tab === 'sorteo' && <RaffleAdmin state={state} onAddPrice={onAddRafflePrice} onRemovePrice={onRemoveRafflePrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
           {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} onDelete={onDeleteSavedEvent} onImport={onImportEvent} />}
@@ -171,15 +172,15 @@ function TeacherAdmin({ state, onAdd, onRemove }: { state: FestivalState; onAdd:
   return <div><div className="admin-intro"><h3>Seños</h3><p>Cargá las profesoras y vinculalas con un club previamente registrado.</p></div><form className="teacher-add" onSubmit={event => { event.preventDefault(); if (name.trim() && club) { onAdd(name.trim(), club); setName('') } }}><input placeholder="Nombre y apellido de la seño" required value={name} onChange={event => setName(event.target.value)} /><select required value={club} onChange={event => setClub(event.target.value)}><option value="">Seleccionar club</option>{state.clubs.map(item => <option key={item}>{item}</option>)}</select><button><Plus /> Agregar</button></form><div className="teacher-list">{state.teachers.map(teacher => <div key={teacher.id}><span><strong>{teacher.name}</strong><small>{teacher.club}</small></span><button onClick={() => onRemove(teacher.id)}>Eliminar</button></div>)}</div></div>
 }
 
-function ClubAdmin({ clubs, logos, onRename, onAdd, onLogo }: { clubs: string[]; logos: Record<string, string>; onRename: Props['onRenameClub']; onAdd: Props['onAddClub']; onLogo: Props['onUpdateClubLogo'] }) {
+function ClubAdmin({ state, clubs, logos, onRename, onAdd, onRemove, onLogo }: { state: FestivalState; clubs: string[]; logos: Record<string, string>; onRename: Props['onRenameClub']; onAdd: Props['onAddClub']; onRemove: Props['onRemoveClub']; onLogo: Props['onUpdateClubLogo'] }) {
   const [name, setName] = useState('')
-  return <div><div className="admin-intro"><h3>Clubes</h3><p>Cargá los clubes y, si querés, agregá su escudo. Sin imagen se mostrarán las iniciales.</p></div><form className="club-add" onSubmit={event => { event.preventDefault(); if (name.trim()) { onAdd(name.trim()); setName('') } }}><input placeholder="Nombre del club" required value={name} onChange={event => setName(event.target.value)} /><button><Plus /> Agregar club</button></form><div className="club-list">{clubs.map(club => <ClubRow key={club} club={club} logo={logos[club]} onRename={onRename} onLogo={onLogo} />)}</div></div>
+  return <div><div className="admin-intro"><h3>Clubes</h3><p>Cargá los clubes y, si querés, agregá su escudo. Para eliminar uno, primero reasigná sus patinadoras y seños.</p></div><form className="club-add" onSubmit={event => { event.preventDefault(); if (name.trim()) { onAdd(name.trim()); setName('') } }}><input placeholder="Nombre del club" required value={name} onChange={event => setName(event.target.value)} /><button><Plus /> Agregar club</button></form><div className="club-list">{clubs.map(club => { const linked = state.skaters.filter(skater => skater.club === club).length + state.teachers.filter(teacher => teacher.club === club).length; return <ClubRow key={club} club={club} logo={logos[club]} linked={linked} onRename={onRename} onRemove={onRemove} onLogo={onLogo} /> })}</div></div>
 }
 
-function ClubRow({ club, logo, onRename, onLogo }: { club: string; logo?: string; onRename: Props['onRenameClub']; onLogo: Props['onUpdateClubLogo'] }) {
+function ClubRow({ club, logo, linked, onRename, onRemove, onLogo }: { club: string; logo?: string; linked: number; onRename: Props['onRenameClub']; onRemove: Props['onRemoveClub']; onLogo: Props['onUpdateClubLogo'] }) {
   const [name, setName] = useState(club)
   const initials = club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()
-  return <div className="club-admin-row"><div className="club-logo-preview">{logo ? <img src={logo} alt={`Escudo de ${club}`} /> : initials}</div><input value={name} onChange={event => setName(event.target.value)} /><label className="file-btn">{logo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeImage(file, value => onLogo(club, value)) }} /></label><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button></div>
+  return <div className="club-admin-row"><div className="club-logo-preview">{logo ? <img src={logo} alt={`Escudo de ${club}`} /> : initials}</div><input value={name} onChange={event => setName(event.target.value)} /><label className="file-btn">{logo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeImage(file, value => onLogo(club, value)) }} /></label><button disabled={!name.trim() || name === club} onClick={() => onRename(club, name.trim())}>Guardar</button><button className="delete-club" disabled={linked > 0} title={linked ? `Tiene ${linked} personas vinculadas` : `Eliminar ${club}`} onClick={() => window.confirm(`¿Eliminar el club ${club}?`) && onRemove(club)}><Trash2 /> <span>{linked ? `${linked} vinculadas` : 'Eliminar'}</span></button></div>
 }
 
 function BuffetAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddBuffetItem']; onUpdate: Props['onUpdateBuffetItem']; onRemove: Props['onRemoveBuffetItem'] }) {
