@@ -205,20 +205,20 @@ export function useFestival(userId = 'public') {
   }, [persist])
 
   const saveNow = useCallback(async (): Promise<'saved' | 'offline' | 'error'> => {
-    const next = {
-      ...state,
-      revision: state.revision + 1,
-      auditLog: [...state.auditLog, { id: createId(), at: new Date().toISOString(), action: 'Guardar cambios', detail: 'Guardado manual desde el panel de administración' }].slice(-200),
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutRuntimeAudio(state)))
+    if (!navigator.onLine) {
+      if (!localStorage.getItem(OFFLINE_BASE_REVISION_KEY)) localStorage.setItem(OFFLINE_BASE_REVISION_KEY, String(Math.max(0, state.revision - 1)))
+      localStorage.setItem(OFFLINE_DIRTY_KEY, 'true')
+      setDatabaseStatus('offline')
+      return 'offline'
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutRuntimeAudio(next)))
-    setState(next)
-    persist(next)
-    if (!navigator.onLine && offlineEnabled) return 'offline'
 
     const deadline = Date.now() + 10000
     while ((saving.current || pendingSave.current) && Date.now() < deadline) await new Promise(resolve => window.setTimeout(resolve, 50))
-    return saving.current || pendingSave.current ? 'error' : 'saved'
-  }, [offlineEnabled, persist, state])
+    if (saving.current || pendingSave.current || databaseStatus === 'conflict' || databaseStatus === 'error') return 'error'
+    setDatabaseStatus('saved')
+    return 'saved'
+  }, [databaseStatus, state])
 
   const setStatus = (id: string, status: SkaterStatus) => update(current => {
     const target = current.skaters.find(skater => skater.id === id)
