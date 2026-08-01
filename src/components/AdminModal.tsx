@@ -2,6 +2,8 @@ import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Headphones, Music2, Plus, Save, Settings2, ShoppingBasket, Trophy, Users, X } from 'lucide-react'
 import type { FestivalState, SavedEvent, Skater } from '../models'
 import { fullName } from '../models'
+import { removeTrack, saveTrack } from '../lib/audioStore'
+import { validateCsvRow } from '../lib/festivalValidation'
 
 type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'copias' | 'offline' | 'audios'
 
@@ -44,6 +46,8 @@ interface Props {
   onClose: () => void
   onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
+  onImportSkaters: (skaters: Array<Omit<Skater, 'id' | 'status'>>) => void
+  onImportEvent: (value: unknown) => void
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
   onRemoveSkater: (id: string) => void
   onRenameClub: (from: string, to: string) => void
@@ -70,7 +74,7 @@ interface Props {
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
 
@@ -95,12 +99,12 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onUpdat
           {tab === 'bufet' && <VisibilityToggle checked={state.useFrameOnBuffet} title="Usar el marco del QR en Bufet" onChange={visible => onSetPublicSectionVisibility('useFrameOnBuffet', visible)} />}
           {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
-          {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
+          {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
           {tab === 'sorteo' && <RaffleAdmin state={state} onAddPrice={onAddRafflePrice} onRemovePrice={onRemoveRafflePrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
-          {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} onDelete={onDeleteSavedEvent} />}
+          {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} onDelete={onDeleteSavedEvent} onImport={onImportEvent} />}
           {tab === 'offline' && <OfflineAdmin enabled={offlineEnabled} onChange={onSetOfflineMode} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
@@ -130,10 +134,20 @@ function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave
   </form>
 }
 
-function SkaterAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
+function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onImport: Props['onImportSkaters']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
   const empty: Omit<Skater, 'id' | 'status'> = { number: state.skaters.length + 1, firstName: '', lastName: '', club: '', category: '', track: '', duration: 180, heat: 'Tanda 1', stageNumber: 1, notes: '' }
   const [form, setForm] = useState(empty)
   const submit = (event: FormEvent) => { event.preventDefault(); onAdd(form); setForm({ ...empty, number: form.number + 1 }) }
+  const importCsv = async (file?: File) => {
+    if (!file) return
+    try {
+      const lines = (await file.text()).replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean)
+      const rows = lines.slice(1).map(line => line.split(';').map(cell => cell.trim().replace(/^"|"$/g, '')))
+      rows.forEach((row, index) => validateCsvRow(row, index + 2))
+      onImport(rows.map(row => ({ number: Number(row[0]), firstName: row[1], lastName: row[2], club: row[3], category: row[4], stageNumber: Number(row[5]) as Skater['stageNumber'], track: row[6] || 'Sin especificar', duration: Number(row[7]) || 180, heat: row[8] || 'Tanda 1', notes: '' })))
+      window.alert(`${rows.length} patinadoras importadas correctamente.`)
+    } catch (error) { window.alert(error instanceof Error ? error.message : 'No se pudo importar el archivo.') }
+  }
   return <div>
     <div className="admin-intro"><h3>Patinadoras</h3><p>Alta rápida y edición directa del listado.</p></div>
     <form className="skater-add" onSubmit={submit}>
@@ -146,6 +160,7 @@ function SkaterAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalStat
       <select aria-label="Etapa" value={form.stageNumber} onChange={event => setForm({ ...form, stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select>
       <button><Plus /> Agregar</button>
     </form>
+    <label className="file-btn">Importar CSV<input type="file" accept=".csv,text/csv" onChange={event => void importCsv(event.target.files?.[0])} /></label><small className="field-help">Columnas: número; nombre; apellido; club; categoría; etapa; canción; duración; tanda.</small>
     <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
   </div>
 }
@@ -188,12 +203,29 @@ function OfflineAdmin({ enabled, onChange }: { enabled: boolean; onChange: Props
   return <div><div className="admin-intro"><h3>Trabajo sin conexión</h3><p>Prepará este equipo para que el festival continúe aunque se corte Internet.</p></div><section className={`offline-card ${enabled ? 'enabled' : ''}`}><Save /><div><small>{enabled ? 'PROTECCIÓN ACTIVADA' : 'OPCIONAL'}</small><h4>{enabled ? 'Este evento está disponible localmente' : 'Descargar evento en este equipo'}</h4><p>Mientras haya Internet se trabaja normalmente con Supabase. Si se corta, los cambios quedan guardados aquí y se sincronizan automáticamente al regresar la conexión.</p></div><button disabled={working} onClick={() => void toggle()}>{working ? 'Preparando…' : enabled ? 'Desactivar modo local' : 'Descargar evento localmente'}</button></section><div className="offline-notes"><strong>Funcionamiento automático</strong><span>✓ No cambia la forma de usar el panel.</span><span>✓ Conserva las acciones realizadas durante el corte.</span><span>✓ Sincroniza nuevamente cuando vuelve Internet.</span><span>✓ La activación se aplica solamente a este equipo y navegador.</span></div></div>
 }
 
-function BackupAdmin({ state, savedEvents, onSave, onRestore, onDelete }: { state: FestivalState; savedEvents: SavedEvent[]; onSave: Props['onSaveEvent']; onRestore: Props['onRestoreEvent']; onDelete: Props['onDeleteSavedEvent'] }) {
+function BackupAdmin({ state, savedEvents, onSave, onRestore, onDelete, onImport }: { state: FestivalState; savedEvents: SavedEvent[]; onSave: Props['onSaveEvent']; onRestore: Props['onRestoreEvent']; onDelete: Props['onDeleteSavedEvent']; onImport: Props['onImportEvent'] }) {
   const [message, setMessage] = useState('')
   const save = async () => setMessage(await onSave() ? 'Copia guardada correctamente en Supabase.' : 'No se pudo guardar la copia.')
-  return <div><div className="admin-intro"><h3>Copias de seguridad</h3><p>Guardá el evento completo y recuperalo si se borran datos o se modifica algo por error.</p></div><div className="backup-current"><Save /><div><small>EVENTO ACTUAL</small><strong>{state.name || 'Evento sin nombre'}</strong><span>{state.skaters.length} patinadoras · {state.clubs.length} clubes · {state.teachers.length} seños</span></div><button onClick={() => void save()}>Guardar copia ahora</button></div>{message && <p className="backup-message">{message}</p>}<div className="saved-events"><div><strong>Copias guardadas en Supabase</strong><small>No se eliminan cuando usás “Borrar todo”.</small></div>{savedEvents.length ? savedEvents.map(saved => <div className="saved-event-row" key={saved.id}><span><b>{saved.name}</b><small>Guardada: {new Date(saved.savedAt).toLocaleString('es-AR')}</small></span><div className="backup-actions"><button type="button" onClick={() => window.confirm(`¿Restaurar ${saved.name}? Reemplazará el evento actual.`) && void onRestore(saved.id)}>Restaurar copia</button><button className="delete-backup" type="button" onClick={() => window.confirm(`¿Eliminar definitivamente la copia de ${saved.name}? El evento actual no se modificará.`) && void onDelete(saved.id)}>Eliminar copia</button></div></div>) : <p className="backup-empty">Todavía no hay copias guardadas.</p>}</div></div>
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }))
+    const link = document.createElement('a'); link.href = url; link.download = `${state.name || 'evento'}-backup.json`; link.click(); URL.revokeObjectURL(url)
+  }
+  const load = async (file?: File) => {
+    if (!file || !window.confirm('¿Importar esta copia y reemplazar el evento actual?')) return
+    try { onImport(JSON.parse(await file.text())); setMessage('Copia local importada correctamente.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Archivo inválido.') }
+  }
+  return <div><div className="admin-intro"><h3>Copias de seguridad</h3><p>Guardá el evento completo y recuperalo si se borran datos o se modifica algo por error.</p></div><div className="backup-current"><Save /><div><small>EVENTO ACTUAL</small><strong>{state.name || 'Evento sin nombre'}</strong><span>{state.skaters.length} patinadoras · {state.clubs.length} clubes · {state.teachers.length} seños</span></div><button onClick={() => void save()}>Guardar copia ahora</button></div><div className="backup-actions"><button onClick={download}>Descargar JSON</button><label className="file-btn">Importar JSON<input type="file" accept=".json,application/json" onChange={event => void load(event.target.files?.[0])} /></label></div>{message && <p className="backup-message">{message}</p>}<div className="saved-events"><div><strong>Copias guardadas en Supabase</strong><small>No se eliminan cuando usás “Borrar todo”.</small></div>{savedEvents.length ? savedEvents.map(saved => <div className="saved-event-row" key={saved.id}><span><b>{saved.name}</b><small>Guardada: {new Date(saved.savedAt).toLocaleString('es-AR')}</small></span><div className="backup-actions"><button type="button" onClick={() => window.confirm(`¿Restaurar ${saved.name}? Reemplazará el evento actual.`) && void onRestore(saved.id)}>Restaurar copia</button><button className="delete-backup" type="button" onClick={() => window.confirm(`¿Eliminar definitivamente la copia de ${saved.name}? El evento actual no se modificará.`) && void onDelete(saved.id)}>Eliminar copia</button></div></div>) : <p className="backup-empty">Todavía no hay copias guardadas.</p>}</div><div className="saved-events"><div><strong>Actividad reciente</strong><small>Últimos cambios conservados en el evento.</small></div>{state.auditLog.slice(-20).reverse().map(entry => <div className="saved-event-row" key={entry.id}><span><b>{entry.action}</b><small>{new Date(entry.at).toLocaleString('es-AR')} · {entry.detail}</small></span></div>)}</div></div>
 }
 
 function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props['onUpdateSkater'] }) {
-  return <div><div className="admin-intro"><h3>Canciones</h3><p>Seleccioná un archivo del equipo. Se reproduce localmente y nunca se sube a Internet.</p></div><div className="audio-list">{skaters.map(skater => <div key={skater.id}><Music2 /><span><strong>{fullName(skater)}</strong><small>{skater.audioName || 'Sin archivo asociado'}</small></span><label className="file-btn">Seleccionar<input type="file" accept="audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) onUpdate(skater.id, { audioName: file.name, audioUrl: URL.createObjectURL(file) }) }} /></label>{skater.audioUrl && <button onClick={() => void new Audio(skater.audioUrl).play()}>Escuchar</button>}</div>)}</div></div>
+  const select = async (skater: Skater, file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('audio/')) { window.alert('Seleccioná un archivo de audio válido.'); return }
+    await saveTrack(skater.id, file)
+    const probe = new Audio(URL.createObjectURL(file))
+    probe.onloadedmetadata = () => onUpdate(skater.id, { audioName: file.name, audioUrl: probe.src, audioReady: true, duration: Math.round(probe.duration) || skater.duration })
+    probe.onerror = () => window.alert(`No se pudo leer ${file.name}. Probá convertirlo a MP3, WAV u OGG.`)
+  }
+  const remove = async (skater: Skater) => { await removeTrack(skater.id); if (skater.audioUrl) URL.revokeObjectURL(skater.audioUrl); onUpdate(skater.id, { audioName: undefined, audioUrl: undefined, audioReady: false }) }
+  return <div><div className="admin-intro"><h3>Canciones</h3><p>Los archivos se guardan de forma persistente en este equipo y nunca se suben a Internet.</p></div><div className="audio-list">{skaters.map(skater => <div key={skater.id}><Music2 /><span><strong>{fullName(skater)}</strong><small>{skater.audioReady ? `✓ ${skater.audioName}` : skater.audioName ? `⚠ No disponible · ${skater.audioName}` : 'Sin archivo asociado'}</small></span><label className="file-btn">Seleccionar<input type="file" accept="audio/*" onChange={event => void select(skater, event.target.files?.[0])} /></label>{skater.audioUrl && <button onClick={() => void new Audio(skater.audioUrl).play()}>Escuchar</button>}{skater.audioName && <button onClick={() => void remove(skater)}>Quitar</button>}</div>)}</div></div>
 }

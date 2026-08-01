@@ -42,6 +42,25 @@ export function Player({ skater, elapsed, volume, onVolume, disabled = false }: 
     if (audio.current) void (next ? audio.current.play() : audio.current.pause())
   }
 
+  const stopWithFade = () => {
+    const element = audio.current
+    setPlaying(false)
+    if (!element) { seek(0); return }
+    const initial = element.volume
+    let step = 0
+    const timer = window.setInterval(() => {
+      step += 1
+      element.volume = Math.max(0, initial * (1 - step / 8))
+      if (step >= 8) {
+        window.clearInterval(timer)
+        element.pause()
+        element.currentTime = 0
+        element.volume = volume / 100
+        setPosition(0)
+      }
+    }, 40)
+  }
+
   const duration = skater?.duration ?? 0
 
   return (
@@ -54,12 +73,12 @@ export function Player({ skater, elapsed, volume, onVolume, disabled = false }: 
       <div className="player-controls">
         <button disabled={disabled} className="icon-btn" title="Retroceder 5 segundos" onClick={() => seek(Math.max(0, position - 5))}><SkipBack /></button>
         <button disabled={disabled} className="play-btn" onClick={toggle}>{playing ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}{playing ? 'PAUSA' : 'PLAY'}</button>
-        <button disabled={disabled} className="icon-btn stop" title="Detener" onClick={() => { setPlaying(false); seek(0); audio.current?.pause() }}><Square fill="currentColor" /></button>
+        <button disabled={disabled} className="icon-btn stop" title="Parada de emergencia con fade" onClick={stopWithFade}><Square fill="currentColor" /></button>
         <button disabled={disabled} className="icon-btn" title="Avanzar 5 segundos" onClick={() => seek(Math.min(duration, position + 5))}><SkipForward /></button>
         <button disabled={disabled} className="icon-btn" title="Reiniciar" onClick={() => seek(0)}><RotateCcw /></button>
         <label className="volume">VOL <input aria-label="Volumen música" type="range" min="0" max="100" value={volume} onChange={event => onVolume(Number(event.target.value))} /><strong>{volume}%</strong></label>
       </div>
-      {skater?.audioUrl && <audio ref={audio} src={skater.audioUrl} preload="auto" onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onEnded={() => setPlaying(false)} />}
+      {skater?.audioUrl && <audio ref={audio} src={skater.audioUrl} preload="auto" onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onEnded={() => setPlaying(false)} onError={() => setPlaying(false)} />}
       {!skater?.audioUrl && <small className="no-audio">Sin archivo musical asociado · Administrar → Audios</small>}
     </div>
   )
