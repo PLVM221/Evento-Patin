@@ -57,7 +57,7 @@ src/
 1. Copiar `.env.example` como `.env.local` y completar las variables de Supabase.
 2. Aplicar, en orden, las migraciones de `supabase/migrations`.
 3. Crear las cuentas de los operadores desde Supabase Authentication.
-4. No publicar el panel antes de aplicar `20260731_secure_event_ownership.sql`: esa migración elimina el acceso anónimo a los datos privados.
+4. No publicar el panel antes de aplicar `20260731235959_secure_event_ownership.sql`: esa migración elimina el acceso anónimo a los datos privados.
 
 La clave publicable de Supabase puede estar en el frontend; la protección real está en Authentication y las políticas RLS. No usar nunca una `service_role` en variables `VITE_*`.
 

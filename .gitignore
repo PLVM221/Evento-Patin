@@ -17,6 +17,7 @@ dist-pages
 backups/
 .tools-node*
 node-v*-win-x64/
+supabase/.temp/
 .env
 .env.*
 .auth-signup.json

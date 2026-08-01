@@ -1,3 +1,4 @@
+-- Secure per-operator ownership and conflict-aware writes.
 alter table public.festival_state
   add column if not exists owner_id uuid references auth.users(id) on delete cascade,
   add column if not exists revision bigint not null default 0;

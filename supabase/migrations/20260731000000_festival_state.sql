@@ -1,3 +1,4 @@
+-- Base event state table and initial realtime publication.
 create table if not exists public.festival_state (
   id text primary key,
   data jsonb not null default '{}'::jsonb,
