@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 00:45 | fix(qr): trigger de base sincroniza snapshot publico por usuario y elimina dependencia del navegador |
 | 00:30 | fix(qr): estado publico persistente en Supabase reemplaza relay temporal y funciona con operador cerrado |
 | 00:10 | fix(qr): vista publica se suscribe al relay y recibe evento, participantes, assets, bufet y sorteo |
 | 23:58 | fix(qr): cronograma filtra patinadoras por etapa cuando no existe orden guardado |

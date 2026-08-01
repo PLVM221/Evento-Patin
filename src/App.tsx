@@ -50,11 +50,8 @@ function OperatorApp({ userId }: { userId: string }) {
   const [qrImage, setQrImage] = useState('')
   const [relayState, setRelayState] = useState<Partial<PublicState>>({})
   const [liveChannel] = useState(() => {
-    const saved = localStorage.getItem('pista-live-channel')
-    if (saved) return saved
-    const created = `pista-${createId()}`
-    localStorage.setItem('pista-live-channel', created)
-    return created
+    if (userId !== 'public') return `pista-${userId}`
+    return new URLSearchParams(window.location.search).get('publico') ?? `pista-${createId()}`
   })
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const customSoundInput = useRef<HTMLInputElement>(null)
