@@ -14,8 +14,6 @@ import { supabase } from './lib/supabase'
 import { createId } from './lib/id'
 import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
 
-const REALTIME_BASE = import.meta.env.VITE_REALTIME_RELAY_URL || 'https://ntfy.envs.net'
-
 function useCountdown(eventDate: string, startTime: string) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -174,18 +172,8 @@ function OperatorApp({ userId }: { userId: string }) {
         stageNumber,
       })),
     }
-    const buffetSnapshot = { buffetItems: state.buffetItems }
-    const assetSnapshot = { organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, clubLogos: state.clubLogos }
-    const publishTo = (topic: string, payload: object) => fetch(REALTIME_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic, title: 'Pista en vivo', message: JSON.stringify(payload) }),
-    })
-    const publish = () => {
-      void publishTo(liveChannel, snapshot)
-      void publishTo(`${liveChannel}-buffet`, buffetSnapshot)
-      if (state.organizerLogo || Object.keys(state.clubLogos).length) void publishTo(`${liveChannel}-assets`, assetSnapshot)
-    }
+    const publicSnapshot = { ...snapshot, buffetItems: state.buffetItems, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, clubLogos: state.clubLogos }
+    const publish = () => { void supabase.rpc('publish_event_snapshot', { p_channel: liveChannel, p_data: publicSnapshot }) }
     const timer = window.setTimeout(publish, 350)
     return () => {
       window.clearTimeout(timer)
@@ -194,19 +182,15 @@ function OperatorApp({ userId }: { userId: string }) {
 
   useEffect(() => {
     if (!publicChannel) return
-    const subscribe = (topic: string) => {
-      const source = new EventSource(`${REALTIME_BASE}/${encodeURIComponent(topic)}/sse?since=1h`)
-      source.onmessage = (event) => {
-        try {
-          const envelope = JSON.parse(event.data) as { event?: string; message?: string }
-          if (envelope.event !== 'message' || !envelope.message) return
-          setRelayState((current) => ({ ...current, ...JSON.parse(envelope.message) as Partial<PublicState> }))
-        } catch { /* Ignorar mensajes ajenos al estado del evento. */ }
-      }
-      return source
-    }
-    const sources = [subscribe(publicChannel), subscribe(`${publicChannel}-buffet`), subscribe(`${publicChannel}-assets`)]
-    return () => sources.forEach((source) => source.close())
+    let active = true
+    void supabase.from('public_event_state').select('data').eq('channel', publicChannel).maybeSingle().then(({ data }) => {
+      if (active && data?.data) setRelayState(data.data as Partial<PublicState>)
+    })
+    const channel = supabase.channel(`public-event-${publicChannel}`).on('postgres_changes', { event: '*', schema: 'public', table: 'public_event_state', filter: `channel=eq.${publicChannel}` }, (payload) => {
+      const row = payload.new as { data?: Partial<PublicState> }
+      if (row.data) setRelayState(row.data)
+    }).subscribe()
+    return () => { active = false; void supabase.removeChannel(channel) }
   }, [publicChannel])
 
   const finalize = () => {
