@@ -25,6 +25,7 @@ const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStage
       organizerLogo: parsed.organizerLogo ?? '',
       publicFrame: parsed.publicFrame ?? '',
       stageCount: parsed.stageCount ?? 2,
+      useHeats: parsed.useHeats ?? false,
       currentStage: parsed.currentStage ?? (parsed.stage === 'Segunda etapa' ? 2 : 1),
       completedStages: parsed.completedStages ?? (parsed.firstStageCompleted ? [1] : []),
       stageOrders: parsed.stageOrders ?? {},
@@ -42,6 +43,7 @@ const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStage
       rafflePrizes: (parsed.rafflePrizes ?? []).map((prize, index) => ({ ...prize, order: Number(prize.order) > 0 ? Number(prize.order) : index + 1 })),
       skaters: (parsed.skaters ?? initialFestival.skaters).map((skater: FestivalState['skaters'][number] & { firstStageStatus?: SkaterStatus }) => ({
         ...skater,
+        heat: parsed.useHeats ? skater.heat : 'Tanda 1',
         stageNumber: sanitizeStage(skater.stageNumber, parsed.stageCount ?? 2),
         status: sanitizeStatus(skater.status),
         stageResults: skater.stageResults ?? (skater.firstStageStatus ? { 1: skater.firstStageStatus } : {}),
@@ -326,8 +328,8 @@ export function useFestival(userId = 'public') {
 
   const finishBreak = () => update(current => ({ ...current, activeBreakAfter: undefined, breakEndsAt: undefined }))
 
-  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount'>) =>
-    update(current => ({ ...current, ...values, currentStage: Math.min(current.currentStage, values.stageCount) as StageNumber, completedStages: current.completedStages.filter(stage => stage <= values.stageCount) }))
+  const updateEvent = (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount' | 'useHeats'>) =>
+    update(current => ({ ...current, ...values, currentStage: Math.min(current.currentStage, values.stageCount) as StageNumber, completedStages: current.completedStages.filter(stage => stage <= values.stageCount), skaters: values.useHeats ? current.skaters : current.skaters.map(skater => ({ ...skater, heat: 'Tanda 1' })) }))
 
   const addSkater = (skater: Omit<FestivalState['skaters'][number], 'id' | 'status'>) =>
     update(current => ({ ...current, skaters: [...current.skaters, { ...skater, id: createId(), status: 'PENDING' }] }))
