@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 23:58 | fix(qr): cronograma filtra patinadoras por etapa cuando no existe orden guardado |
 | 23:50 | feat(evento): opcion para activar tandas; desactivada fuerza Tanda 1 y oculta selector |
 | 23:30 | debug(backups): error real de Supabase visible al fallar Guardar copia ahora |
 | 23:15 | fix(backups): copias en Supabase usan funcion segura autenticada y dejan de fallar por RLS |
