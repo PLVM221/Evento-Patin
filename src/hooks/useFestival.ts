@@ -412,7 +412,21 @@ export function useFestival(userId = 'public') {
     setDatabaseStatus('saved')
   }
 
-  const clearFestival = () => update(current => ({ ...current, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], showBuffet: false, showRaffle: false, useFrameOnBuffet: true, useFrameOnRaffle: true, raffleTicketPrice: 0, rafflePrices: [], rafflePrizes: [], skaters: [], activeId: undefined, elapsed: 0 }))
+  const clearFestival = async () => {
+    const cleared: FestivalState = { ...state, revision: state.revision + 1, name: '', organizer: '', organizerLogo: '', publicFrame: '', location: '', eventDate: '', startTime: '', countdownMinutes: 30, breakDurationMinutes: 20, stageCount: 1, currentStage: 1, completedStages: [], stageOrders: {}, started: false, activeBreakAfter: undefined, breakEndsAt: undefined, clubs: [], clubLogos: {}, teachers: [], buffetItems: [], showBuffet: false, showRaffle: false, useFrameOnBuffet: true, useFrameOnRaffle: true, raffleTicketPrice: 0, rafflePrices: [], rafflePrizes: [], skaters: [], activeId: undefined, elapsed: 0, auditLog: [...state.auditLog, { id: createId(), at: new Date().toISOString(), action: 'Borrar evento', detail: 'Se eliminaron todos los datos del evento' }].slice(-200) }
+    pendingSave.current = null
+    setState(cleared)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutRuntimeAudio(cleared)))
+    if (!navigator.onLine) {
+      localStorage.setItem(OFFLINE_DIRTY_KEY, 'true')
+      localStorage.setItem(OFFLINE_BASE_REVISION_KEY, String(state.revision))
+      setDatabaseStatus('offline')
+      return
+    }
+    setDatabaseStatus('saving')
+    const { error } = await supabase.from('festival_state').upsert({ id: stateId, owner_id: userId, data: withoutRuntimeAudio(cleared), revision: cleared.revision, updated_at: new Date().toISOString() })
+    setDatabaseStatus(error ? 'error' : 'saved')
+  }
 
   const moveToPosition = (id: string, stage: StageNumber, position: number) => update(current => {
     const ids = [...(current.stageOrders[stage] ?? current.skaters.filter(skater => skater.stageNumber === stage).map(skater => skater.id))].filter(skaterId => skaterId !== id)

@@ -105,3 +105,4 @@
 | 22:14 | feat(sync): guardado manual crea una revisiÃ³n y entrada de auditorÃ­a sin desactivar el guardado automÃ¡tico |
 | 22:14 | test: `npm run lint`, `npm test` y `npm run build` OK para el guardado manual |
 | 22:22 | fix(sync): guardado manual deja de crear revisiones duplicadas; espera autosave pendiente y confirma estado real |
+| 22:31 | fix(reset): `Borrar todo` vacÃ­a estado local y remoto aunque exista conflicto de revisiÃ³n previo |
