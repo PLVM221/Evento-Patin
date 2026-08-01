@@ -68,6 +68,7 @@ interface Props {
   onRemoveRafflePrize: (id: string) => void
   savedEvents: SavedEvent[]
   onSaveEvent: () => Promise<boolean>
+  onSaveChanges: () => Promise<'saved' | 'offline' | 'error'>
   onRestoreEvent: (id: string) => Promise<boolean>
   onDeleteSavedEvent: (id: string) => Promise<boolean>
   offlineEnabled: boolean
@@ -75,9 +76,11 @@ interface Props {
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onRemoveClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onRemoveClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onSaveChanges, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'offline' | 'error'>('idle')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
+  const saveChanges = async () => { setSaveStatus('saving'); setSaveStatus(await onSaveChanges()) }
 
   return (
     <div className="admin-backdrop">
@@ -109,6 +112,10 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'offline' && <OfflineAdmin enabled={offlineEnabled} onChange={onSetOfflineMode} />}
           {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
         </div>
+        <footer className={`admin-save-bar ${saveStatus}`}>
+          <span>{saveStatus === 'saved' ? 'Cambios guardados en la nube.' : saveStatus === 'offline' ? 'Guardado en este equipo. Se sincronizará al volver Internet.' : saveStatus === 'error' ? 'No se pudo guardar. Revisá la conexión.' : 'El guardado automático está activo.'}</span>
+          <button type="button" disabled={saveStatus === 'saving'} onClick={() => void saveChanges()}><Save />{saveStatus === 'saving' ? 'GUARDANDO…' : 'GUARDAR CAMBIOS'}</button>
+        </footer>
       </section>
     </div>
   )
