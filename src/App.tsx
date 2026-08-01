@@ -781,7 +781,7 @@ function PublicView({ state }: { state: PublicState }) {
           <div className="public-schedule">
             {Array.from({ length: live.stageCount }, (_, index) => {
               const stage = (index + 1) as StageNumber
-              const ids = live.stageOrders[stage] ?? live.skaters.map((skater) => skater.id)
+              const ids = live.stageOrders[stage] ?? live.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)
               return (
                 <section key={stage}>
                   <h3>Etapa {stage}</h3>
