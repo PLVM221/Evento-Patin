@@ -69,3 +69,9 @@
 | 2026-07-31 | feat(backups): eliminación individual confirmada de copias en Supabase |
 | 2026-07-31 | feat(public): marco QR opcional e independiente en Bufet y Sorteo |
 | 2026-07-31 | feat(offline): modo local opcional con caché, continuidad y resincronización automática |
+
+### 2026-07-31
+
+| Hora | Cambio |
+|------|--------|
+| 21:59 | docs(agents): reglas persistentes para leer `Proyecto.md` y `WORKLOG.md` al iniciar |
