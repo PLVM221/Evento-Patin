@@ -214,11 +214,24 @@ export function useFestival(userId = 'public') {
     }
 
     const deadline = Date.now() + 10000
-    while ((saving.current || pendingSave.current) && Date.now() < deadline) await new Promise(resolve => window.setTimeout(resolve, 50))
-    if (saving.current || pendingSave.current || databaseStatus === 'conflict' || databaseStatus === 'error') return 'error'
+    while (saving.current && Date.now() < deadline) await new Promise(resolve => window.setTimeout(resolve, 50))
+    if (saving.current) return 'error'
+
+    pendingSave.current = null
+    setDatabaseStatus('saving')
+    const { data, error: readError } = await supabase.from('festival_state').select('revision').eq('id', stateId).maybeSingle()
+    if (readError) { setDatabaseStatus('error'); return 'error' }
+    const remoteRevision = Number(data?.revision) || 0
+    const next = { ...state, revision: remoteRevision + 1 }
+    const { error } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: withoutRuntimeAudio(next), p_expected_revision: remoteRevision, p_new_revision: next.revision })
+    if (error) { setDatabaseStatus(error.code === '40001' ? 'conflict' : 'error'); return 'error' }
+    setState(next)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutRuntimeAudio(next)))
+    localStorage.removeItem(OFFLINE_DIRTY_KEY)
+    localStorage.removeItem(OFFLINE_BASE_REVISION_KEY)
     setDatabaseStatus('saved')
     return 'saved'
-  }, [databaseStatus, state])
+  }, [state, stateId])
 
   const setStatus = (id: string, status: SkaterStatus) => update(current => {
     const target = current.skaters.find(skater => skater.id === id)
