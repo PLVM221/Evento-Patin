@@ -242,11 +242,12 @@ export function useFestival(userId = 'public') {
     return { ...current, activeId: status === 'READY' || status === 'SKATING' ? id : current.activeId, skaters: current.skaters.map(skater => skater.id === id ? { ...skater, status } : skater) }
   })
 
-  const start = () => update(current => ({
-    ...current,
-    started: true,
-    skaters: current.skaters.map(skater => skater.id === current.activeId ? { ...skater, status: 'SKATING' } : skater),
-  }), 'Iniciar evento', 'Comenzó la reproducción de la etapa actual')
+  const start = () => update(current => {
+    const active = current.skaters.find(skater => skater.id === current.activeId && skater.stageNumber === current.currentStage && skater.status !== 'ABSENT')
+      ?? current.skaters.find(skater => skater.stageNumber === current.currentStage && (skater.status === 'PENDING' || skater.status === 'READY' || skater.status === 'POSTPONED'))
+    if (!active) return current
+    return { ...current, started: true, activeId: active.id, skaters: current.skaters.map(skater => skater.id === active.id ? { ...skater, status: 'SKATING' } : skater) }
+  }, 'Iniciar evento', 'Comenzó la reproducción de la etapa actual')
 
   const finishAndNext = () => update(current => {
     if (!current.started) return current
