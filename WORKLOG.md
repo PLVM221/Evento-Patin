@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 00:10 | fix(qr): vista publica se suscribe al relay y recibe evento, participantes, assets, bufet y sorteo |
 | 23:58 | fix(qr): cronograma filtra patinadoras por etapa cuando no existe orden guardado |
 | 23:50 | feat(evento): opcion para activar tandas; desactivada fuerza Tanda 1 y oculta selector |
 | 23:30 | debug(backups): error real de Supabase visible al fallar Guardar copia ahora |
