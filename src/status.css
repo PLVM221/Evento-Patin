@@ -15,6 +15,77 @@
   color: #d37a83;
 }
 
+.admin-skater {
+  grid-template-columns: 82px 1.3fr 1fr 100px auto !important;
+}
+
+.admin-skater.not-participating {
+  opacity: 0.55;
+  background: #fff3f3;
+}
+
+.participation-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4d765f;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.participation-check input {
+  width: 17px !important;
+  height: 17px;
+  margin: 0 !important;
+  accent-color: var(--mint);
+}
+
+.active-identity > div:last-child > small,
+.public-active-main > div:last-child > small {
+  color: #9ca4b7;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.active-skater-name {
+  margin: 4px 0 0;
+  color: #7d879a;
+  font-size: 11px;
+}
+
+.public-coreography {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+}
+
+.public-coreography small {
+  font-size: 9px;
+  letter-spacing: 1.2px;
+}
+
+.public-coreography strong {
+  font-size: 22px;
+}
+
+.public-coreography span {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+@media (max-width: 700px) {
+  .admin-skater {
+    grid-template-columns: 82px 1fr !important;
+  }
+
+  .admin-skater > input,
+  .admin-skater > select,
+  .admin-skater .delete-skater {
+    grid-column: 2;
+  }
+}
+
 .search-wrap {
   position: relative;
   align-self: center;

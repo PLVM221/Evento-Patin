@@ -99,7 +99,7 @@ function OperatorApp({ userId }: { userId: string }) {
       gain: 1,
     },
   ])
-  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage)
+  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage && skater.status !== 'ABSENT')
   const active = stageSkaters.find((skater) => skater.id === state.activeId)
   const activeTeachers = active ? state.teachers.filter((teacher) => teacher.club === active.club) : []
   const waiting = stageSkaters.filter((skater) => skater.status === 'PENDING' || skater.status === 'POSTPONED')
@@ -158,7 +158,7 @@ function OperatorApp({ userId }: { userId: string }) {
           return [stage, state.stageOrders[stage] ?? state.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)]
         }),
       ),
-      skaters: state.skaters.map(({ id, number, firstName, lastName, club, track, status, stageNumber }) => ({
+      skaters: state.skaters.filter(({ status }) => status !== 'ABSENT').map(({ id, number, firstName, lastName, club, track, status, stageNumber }) => ({
         id,
         number,
         firstName,
@@ -460,9 +460,7 @@ function OperatorApp({ userId }: { userId: string }) {
             {active ? (
               <>
                 <div className="bib">Nº {active.number}</div>
-                <div className="active-identity"><div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div><h1>{active.firstName}<br /><strong>{active.lastName}</strong></h1></div>
-                <p className="club">{active.club}</p>
-                {activeTeachers.length > 0 && <div className="active-teacher"><small>SEÑO</small><strong>{activeTeachers.map((teacher) => teacher.name).join(' · ')}</strong></div>}
+                <div className="active-identity"><div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><small>CLUB</small><h1>{active.club}</h1><p className="active-skater-name">Patinadora: {fullName(active)}</p></div></div>
                 <div className="track">
                   <span>♫</span>
                   <div>
@@ -471,6 +469,7 @@ function OperatorApp({ userId }: { userId: string }) {
                     <em>{active.category}</em>
                   </div>
                 </div>
+                <div className="active-teacher"><small>SEÑO</small><strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>
                 <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={(value) => setVolume('musicVolume', value)} />
                 <div className="critical-actions">
                   <button disabled={!state.started} className="finish" onClick={finalize}>
@@ -813,13 +812,9 @@ function PublicView({ state }: { state: PublicState }) {
         <>
           <section className="public-now">
             <small>EN PISTA</small>
-            <div className="public-active-main">{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : `${active.firstName[0]}${active.lastName[0]}`}</div>}<h2>{active ? fullName(active as Skater) : 'En preparación'}</h2></div>
-            {active && (
-              <p>
-                {active.club} · {active.track}
-              </p>
-            )}
-            {activeTeachers.length > 0 && <div className="public-active-teacher">Seño: <strong>{activeTeachers.map((teacher) => teacher.name).join(' · ')}</strong></div>}
+            <div className="public-active-main">{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>CLUB</small><h2>{active?.club ?? 'En preparación'}</h2></div></div>
+            {active && <div className="public-coreography"><small>COREOGRAFÍA / TEMA</small><strong>{active.track}</strong><span>Patinadora: {fullName(active as Skater)}</span></div>}
+            {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>
           <div className="public-columns">
             <div>

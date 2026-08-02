@@ -158,7 +158,7 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
     } catch (error) { window.alert(error instanceof Error ? error.message : 'No se pudo importar el archivo.') }
   }
   return <div>
-    <div className="admin-intro"><h3>Patinadoras</h3><p>Alta rápida y edición directa del listado.</p></div>
+    <div className="admin-intro"><h3>Patinadoras</h3><p>Marcá quién participa. Si está lesionada, destildala y no se cargará en el evento.</p></div>
     <form className="skater-add" onSubmit={submit}>
       <input aria-label="Número" type="number" required value={form.number} onChange={event => setForm({ ...form, number: Number(event.target.value) })} />
       <input placeholder="Nombre" required value={form.firstName} onChange={event => setForm({ ...form, firstName: event.target.value })} />
@@ -170,7 +170,7 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
       <button><Plus /> Agregar</button>
     </form>
     <label className="file-btn">Importar CSV<input type="file" accept=".csv,text/csv" onChange={event => void importCsv(event.target.files?.[0])} /></label><small className="field-help">Columnas: número; nombre; apellido; club; categoría; etapa; canción; duración; tanda.</small>
-    <div className="admin-list">{state.skaters.map(skater => <div className="admin-skater" key={skater.id}><b>{skater.number}</b><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
+    <div className="admin-list">{state.skaters.map(skater => <div className={`admin-skater ${skater.status === 'ABSENT' ? 'not-participating' : ''}`} key={skater.id}><label className="participation-check"><input type="checkbox" checked={skater.status !== 'ABSENT'} disabled={skater.status === 'FINISHED' || skater.status === 'SKATING'} onChange={event => onUpdate(skater.id, { status: event.target.checked ? 'PENDING' : 'ABSENT' })} /><span>Participa</span></label><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
   </div>
 }
 

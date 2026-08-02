@@ -1,5 +1,13 @@
 # WORKLOG
 
+### 2026-08-02
+
+| Hora | Cambio |
+|------|--------|
+| 16:13 | feat(patinadoras): tilde Participa excluye lesionadas de conducción y vista pública |
+| 16:13 | style(pista): Club, Coreografía/Tema y Seño pasan a ser datos principales |
+| 16:13 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+
 ### 2026-07-30
 
 | Hora | Cambio |
