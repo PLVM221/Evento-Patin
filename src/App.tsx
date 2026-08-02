@@ -181,14 +181,16 @@ function OperatorApp({ userId }: { userId: string }) {
   useEffect(() => {
     if (!publicChannel) return
     let active = true
-    void supabase.from('public_event_state').select('data').eq('channel', publicChannel).maybeSingle().then(({ data }) => {
+    const refresh = () => void supabase.from('public_event_state').select('data').eq('channel', publicChannel).maybeSingle().then(({ data }) => {
       if (active && data?.data) setRelayState(data.data as Partial<PublicState>)
     })
+    refresh()
+    const refreshTimer = window.setInterval(refresh, 5000)
     const channel = supabase.channel(`public-event-${publicChannel}`).on('postgres_changes', { event: '*', schema: 'public', table: 'public_event_state', filter: `channel=eq.${publicChannel}` }, (payload) => {
       const row = payload.new as { data?: Partial<PublicState> }
       if (row.data) setRelayState(row.data)
     }).subscribe()
-    return () => { active = false; void supabase.removeChannel(channel) }
+    return () => { active = false; window.clearInterval(refreshTimer); void supabase.removeChannel(channel) }
   }, [publicChannel])
 
   const finalize = () => {
@@ -818,7 +820,7 @@ function PublicView({ state }: { state: PublicState }) {
         <>
           <section className="public-now">
             <small>EN PISTA</small>
-            <div className="public-active-main">{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>CLUB</small><h2>{active?.club ?? 'En preparación'}</h2></div></div>
+            <div className={`public-active-main${active ? '' : ' no-active'}`}>{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>{active ? 'CLUB' : 'ESTADO'}</small><h2>{active?.club ?? 'Esperando primera pasada'}</h2></div></div>
             {active && <div className="public-coreography"><small>COREOGRAFÍA / TEMA</small><strong>{active.track}</strong>{live.showSkaters && <span>Patinadora: {fullName(active as Skater)}</span>}</div>}
             {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>

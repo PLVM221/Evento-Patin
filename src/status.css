@@ -80,6 +80,36 @@
   font-size: 15px !important;
 }
 
+.public-now .public-active-main.no-active {
+  display: block;
+  max-width: 100%;
+  text-align: center;
+}
+
+.public-now .public-active-main.no-active h2 {
+  font-size: clamp(24px, 7vw, 36px) !important;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+@media (max-width: 700px) {
+  .public-now .public-active-main {
+    grid-template-columns: 58px minmax(0, 1fr) !important;
+  }
+
+  .public-now .public-active-logo {
+    width: 58px !important;
+    height: 58px !important;
+    flex-basis: 58px !important;
+  }
+
+  .public-now .public-active-main h2 {
+    font-size: clamp(24px, 8vw, 32px) !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+}
+
 @media (max-width: 700px) {
   .admin-skater {
     grid-template-columns: 82px 1fr !important;

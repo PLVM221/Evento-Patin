@@ -16,6 +16,9 @@
 | 17:10 | fix(etapas): inicio, reinicio y cambio de etapa seleccionan sólo entradas del modo activo |
 | 17:10 | fix(etapas): bloqueo de cierre con pasadas pendientes y reapertura de estados inconsistentes |
 | 17:10 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+| 18:55 | fix(qr): polling de respaldo cada 5 segundos recupera cambios perdidos por tiempo real |
+| 18:55 | fix(mobile): estado sin club activo deja de cortarse letra por letra y usa tarjeta responsive |
+| 18:55 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 
 ### 2026-07-30
 
