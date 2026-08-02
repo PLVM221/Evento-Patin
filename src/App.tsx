@@ -399,22 +399,27 @@ function OperatorApp({ userId }: { userId: string }) {
             const completed = state.completedStages.includes(stage)
             const isCurrent = stage === state.currentStage
             const canStartNext = stage === state.currentStage + 1 && currentStageCompleted && !state.activeBreakAfter
-            const label = completed ? `ETAPA ${stage} FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ETAPA ${stage}` : `INICIAR ETAPA ${stage}`) : canStartNext ? `INICIAR ETAPA ${stage}` : `ETAPA ${stage} PENDIENTE`
+            const hasPending = isCurrent && (waiting.length > 0 || Boolean(active))
+            const label = completed && hasPending ? `REABRIR ETAPA ${stage}` : completed ? `ETAPA ${stage} FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ETAPA ${stage}` : `INICIAR ETAPA ${stage}`) : canStartNext ? `INICIAR ETAPA ${stage}` : `ETAPA ${stage} PENDIENTE`
             const action = () => {
               if (canStartNext) {
                 if (window.confirm(`¿Iniciar etapa ${stage}?`)) startNextStage()
                 return
               }
+              if (completed && hasPending) { start(); return }
               if (!isCurrent || completed) return
               if (state.started) {
-                if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage()
+                if (waiting.length > 0 || active) window.alert(`Todavía quedan ${(waiting.length + (active ? 1 : 0))} pasadas en la etapa ${stage}. Finalizalas antes de cerrar la etapa.`)
+                else if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage()
+              } else if (stageSkaters.length === 0) {
+                window.alert(state.showSkaters ? 'No hay patinadoras habilitadas en esta etapa.' : 'No hay pasadas de clubes cargadas en esta etapa. Cargalas en Administrar → Pasadas.')
               } else if (window.confirm(`¿Iniciar etapa ${stage}?`)) start()
             }
             const breakActive = state.activeBreakAfter === stage
             const breakEnabled = completed && isCurrent
             return (
               <div className="stage-block" key={stage}>
-                <button className={`stage-control ${completed ? 'completed' : ''} ${state.started && isCurrent ? 'running' : ''}`} disabled={(!isCurrent && !canStartNext) || completed} onClick={action}>
+                <button className={`stage-control ${completed ? 'completed' : ''} ${state.started && isCurrent ? 'running' : ''}`} disabled={(!isCurrent && !canStartNext) || (completed && !hasPending)} onClick={action}>
                   {completed ? <Check /> : state.started && isCurrent ? <Check /> : <PlayIcon />}
                   <span>
                     <strong>{label}</strong>
@@ -482,7 +487,7 @@ function OperatorApp({ userId }: { userId: string }) {
                 </div>
               </>
             ) : (
-              <div className="empty">Festival finalizado</div>
+              <div className="empty">{state.started ? 'Etapa sin pasada activa' : currentStageCompleted ? 'Etapa finalizada' : 'Iniciá la etapa para cargar el primer club'}</div>
             )}
           </section>
 

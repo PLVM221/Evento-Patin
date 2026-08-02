@@ -13,6 +13,9 @@
 | 16:50 | feat(pasadas): nueva solapa para ordenar Club, Coreografía/Tema, etapa y audio opcional |
 | 16:50 | feat(modo): operador y QR alternan entre patinadoras y pasadas de clubes |
 | 16:50 | style(clubes): seños ampliadas y fichas preparadas para contar pasadas por etapa |
+| 17:10 | fix(etapas): inicio, reinicio y cambio de etapa seleccionan sólo entradas del modo activo |
+| 17:10 | fix(etapas): bloqueo de cierre con pasadas pendientes y reapertura de estados inconsistentes |
+| 17:10 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 
 ### 2026-07-30
 

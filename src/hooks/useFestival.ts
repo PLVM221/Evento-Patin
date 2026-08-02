@@ -248,7 +248,7 @@ export function useFestival(userId = 'public') {
     const active = current.skaters.find(skater => enabled(skater) && skater.id === current.activeId && skater.stageNumber === current.currentStage && skater.status !== 'ABSENT')
       ?? current.skaters.find(skater => enabled(skater) && skater.stageNumber === current.currentStage && (skater.status === 'PENDING' || skater.status === 'READY' || skater.status === 'POSTPONED'))
     if (!active) return current
-    return { ...current, started: true, activeId: active.id, skaters: current.skaters.map(skater => skater.id === active.id ? { ...skater, status: 'SKATING' } : skater) }
+    return { ...current, started: true, completedStages: current.completedStages.filter(stage => stage !== current.currentStage), activeId: active.id, skaters: current.skaters.map(skater => skater.id === active.id ? { ...skater, status: 'SKATING' } : skater) }
   }, 'Iniciar evento', 'Comenzó la reproducción de la etapa actual')
 
   const finishAndNext = () => update(current => {
@@ -293,13 +293,16 @@ export function useFestival(userId = 'public') {
     started: false,
     activeBreakAfter: undefined,
     breakEndsAt: undefined,
-    activeId: current.skaters.find(skater => skater.stageNumber === 1)?.id,
+    activeId: current.skaters.find(skater => (current.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club') && skater.stageNumber === 1)?.id,
     elapsed: 0,
     skaters: current.skaters.map(skater => ({ ...skater, stageResults: {}, status: skater.id === current.skaters.find(item => item.stageNumber === 1)?.id ? 'READY' : 'PENDING' })),
   }), 'Reiniciar festival', 'Se reiniciaron etapas y resultados')
 
   const completeStage = () => update(current => {
     const finishingStage = current.currentStage
+    const enabled = (skater: FestivalState['skaters'][number]) => current.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club'
+    const pending = current.skaters.some(skater => enabled(skater) && skater.stageNumber === finishingStage && skater.status !== 'FINISHED' && skater.status !== 'ABSENT')
+    if (pending) return current
     return {
       ...current,
       completedStages: [...new Set([...current.completedStages, finishingStage])] as StageNumber[],
@@ -322,7 +325,7 @@ export function useFestival(userId = 'public') {
     const orderedStage = (current.stageOrders[nextStage] ?? stageIds).map(id => byId.get(id)!).filter(Boolean)
     const otherStages = current.skaters.filter(skater => skater.stageNumber !== nextStage)
     const ordered = [...orderedStage, ...otherStages]
-    const eligible = orderedStage.filter(skater => skater.status !== 'ABSENT')
+    const eligible = orderedStage.filter(skater => (current.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club') && skater.status !== 'ABSENT')
     const first = eligible[0]
     return { ...current, currentStage: nextStage, started: true, activeBreakAfter: undefined, breakEndsAt: undefined, elapsed: 0, activeId: first?.id, skaters: ordered.map(skater => skater.stageNumber === nextStage ? ({ ...skater, status: skater.id === first?.id ? 'SKATING' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' }) : skater) }
   })
