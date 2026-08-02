@@ -41,6 +41,7 @@ export interface AuditEntry {
 
 export interface Skater {
   id: string
+  entryType?: 'skater' | 'club'
   number: number
   firstName: string
   lastName: string

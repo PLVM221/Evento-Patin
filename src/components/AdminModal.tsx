@@ -5,7 +5,7 @@ import { fullName } from '../models'
 import { removeTrack, saveTrack } from '../lib/audioStore'
 import { validateCsvRow } from '../lib/festivalValidation'
 
-type Tab = 'evento' | 'participantes' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'copias' | 'offline' | 'audios'
+type Tab = 'evento' | 'participantes' | 'pasadas' | 'senos' | 'clubes' | 'bufet' | 'sorteo' | 'copias' | 'offline' | 'audios'
 
 const optimizeImage = (file: File, done: (value: string) => void) => {
   const reader = new FileReader()
@@ -89,6 +89,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
         <nav className="admin-tabs">
           <button className={tab === 'evento' ? 'selected' : ''} onClick={() => setTab('evento')}><Settings2 /> Evento</button>
           {state.showSkaters && <button className={tab === 'participantes' ? 'selected' : ''} onClick={() => setTab('participantes')}><Users /> Patinadoras</button>}
+          <button className={tab === 'pasadas' ? 'selected' : ''} onClick={() => setTab('pasadas')}><Music2 /> Pasadas</button>
           <button className={tab === 'senos' ? 'selected' : ''} onClick={() => setTab('senos')}><Users /> Seños</button>
           <button className={tab === 'clubes' ? 'selected' : ''} onClick={() => setTab('clubes')}><Users /> Clubes</button>
           <button className={tab === 'bufet' ? 'selected' : ''} onClick={() => setTab('bufet')}><ShoppingBasket /> Bufet</button>
@@ -104,6 +105,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {state.showSkaters && tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
+          {tab === 'pasadas' && <PassAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin state={state} clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onRemove={onRemoveClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
@@ -173,6 +175,15 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
     <label className="file-btn">Importar CSV<input type="file" accept=".csv,text/csv" onChange={event => void importCsv(event.target.files?.[0])} /></label><small className="field-help">Columnas: número; nombre; apellido; club; categoría; etapa; canción; duración; tanda.</small>
     <div className="admin-list">{state.skaters.map(skater => <div className={`admin-skater ${skater.status === 'ABSENT' ? 'not-participating' : ''}`} key={skater.id}><label className="participation-check"><input type="checkbox" checked={skater.status !== 'ABSENT'} disabled={skater.status === 'FINISHED' || skater.status === 'SKATING'} onChange={event => onUpdate(skater.id, { status: event.target.checked ? 'PENDING' : 'ABSENT' })} /><span>Participa</span></label><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
   </div>
+}
+
+function PassAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
+  const [club, setClub] = useState(state.clubs[0] ?? '')
+  const [track, setTrack] = useState('')
+  const [stageNumber, setStageNumber] = useState<Skater['stageNumber']>(1)
+  const passes = state.skaters.filter(item => item.entryType === 'club')
+  const submit = (event: FormEvent) => { event.preventDefault(); if (!club || !track.trim()) return; onAdd({ entryType: 'club', number: state.skaters.length + 1, firstName: '', lastName: '', club, category: '', track: track.trim(), duration: 180, heat: 'Tanda 1', stageNumber, notes: '' }); setTrack('') }
+  return <div><div className="admin-intro"><h3>Orden de pasadas</h3><p>Cargá Club, Coreografía/Tema y etapa. Repetí un club todas las veces necesarias.</p></div><form className="teacher-add" onSubmit={submit}><select required value={club} onChange={event => setClub(event.target.value)}>{state.clubs.map(item => <option key={item}>{item}</option>)}</select><input required placeholder="Coreografía / Tema" value={track} onChange={event => setTrack(event.target.value)} /><select value={stageNumber} onChange={event => setStageNumber(Number(event.target.value) as Skater['stageNumber'])}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button><Plus /> Agregar pasada</button></form><div className="admin-list">{passes.map((pass, index) => <div className="admin-skater" key={pass.id}><b>{index + 1}</b><select value={pass.club} onChange={event => onUpdate(pass.id, { club: event.target.value })}>{state.clubs.map(item => <option key={item}>{item}</option>)}</select><input value={pass.track} onChange={event => onUpdate(pass.id, { track: event.target.value })} /><select value={pass.stageNumber} onChange={event => onUpdate(pass.id, { stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, stage) => <option key={stage + 1} value={stage + 1}>Etapa {stage + 1}</option>)}</select><button className="delete-skater" onClick={() => onRemove(pass.id)}>Eliminar</button></div>)}</div><small className="field-help">Audio opcional: cargalo después desde la solapa Audios.</small></div>
 }
 
 function TeacherAdmin({ state, onAdd, onRemove }: { state: FestivalState; onAdd: Props['onAddTeacher']; onRemove: Props['onRemoveTeacher'] }) {

@@ -99,7 +99,7 @@ function OperatorApp({ userId }: { userId: string }) {
       gain: 1,
     },
   ])
-  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage && skater.status !== 'ABSENT')
+  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage && skater.status !== 'ABSENT' && (state.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club'))
   const active = stageSkaters.find((skater) => skater.id === state.activeId)
   const activeTeachers = active ? state.teachers.filter((teacher) => teacher.club === active.club) : []
   const waiting = stageSkaters.filter((skater) => skater.status === 'PENDING' || skater.status === 'POSTPONED')
@@ -159,7 +159,7 @@ function OperatorApp({ userId }: { userId: string }) {
           return [stage, state.stageOrders[stage] ?? state.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)]
         }),
       ),
-      skaters: state.skaters.filter(({ status }) => status !== 'ABSENT').map(({ id, number, firstName, lastName, club, track, status, stageNumber }) => ({
+      skaters: state.skaters.filter(({ status, entryType }) => status !== 'ABSENT' && (state.showSkaters ? entryType !== 'club' : entryType === 'club')).map(({ id, number, firstName, lastName, club, track, status, stageNumber }) => ({
         id,
         number,
         firstName,

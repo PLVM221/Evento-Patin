@@ -10,6 +10,9 @@
 | 16:30 | feat(evento): tilde global Mostrar patinadoras oculta módulo, nombres y controles en operador y QR sin borrar datos |
 | 16:30 | style(evento): modo sin patinadoras prioriza Club, Coreografía/Tema y Seño |
 | 16:30 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+| 16:50 | feat(pasadas): nueva solapa para ordenar Club, Coreografía/Tema, etapa y audio opcional |
+| 16:50 | feat(modo): operador y QR alternan entre patinadoras y pasadas de clubes |
+| 16:50 | style(clubes): seños ampliadas y fichas preparadas para contar pasadas por etapa |
 
 ### 2026-07-30
 
