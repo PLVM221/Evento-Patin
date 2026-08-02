@@ -44,7 +44,7 @@ const optimizeFrame = (file: File, done: (value: string) => void) => {
 interface Props {
   state: FestivalState
   onClose: () => void
-  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount' | 'useHeats'>) => void
+  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount' | 'showSkaters' | 'useHeats'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onImportSkaters: (skaters: Array<Omit<Skater, 'id' | 'status'>>) => void
   onImportEvent: (value: unknown) => void
@@ -88,7 +88,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
         <header className="admin-header"><div><small>CONFIGURACIÓN</small><h2>Administrar festival</h2></div><button onClick={onClose}><X /></button></header>
         <nav className="admin-tabs">
           <button className={tab === 'evento' ? 'selected' : ''} onClick={() => setTab('evento')}><Settings2 /> Evento</button>
-          <button className={tab === 'participantes' ? 'selected' : ''} onClick={() => setTab('participantes')}><Users /> Patinadoras</button>
+          {state.showSkaters && <button className={tab === 'participantes' ? 'selected' : ''} onClick={() => setTab('participantes')}><Users /> Patinadoras</button>}
           <button className={tab === 'senos' ? 'selected' : ''} onClick={() => setTab('senos')}><Users /> Seños</button>
           <button className={tab === 'clubes' ? 'selected' : ''} onClick={() => setTab('clubes')}><Users /> Clubes</button>
           <button className={tab === 'bufet' ? 'selected' : ''} onClick={() => setTab('bufet')}><ShoppingBasket /> Bufet</button>
@@ -103,14 +103,14 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'bufet' && <VisibilityToggle checked={state.useFrameOnBuffet} title="Usar el marco del QR en Bufet" onChange={visible => onSetPublicSectionVisibility('useFrameOnBuffet', visible)} />}
           {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
-          {tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
+          {state.showSkaters && tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin state={state} clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onRemove={onRemoveClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
           {tab === 'sorteo' && <RaffleAdmin state={state} onAddPrice={onAddRafflePrice} onRemovePrice={onRemoveRafflePrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
           {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} onDelete={onDeleteSavedEvent} onImport={onImportEvent} />}
           {tab === 'offline' && <OfflineAdmin enabled={offlineEnabled} onChange={onSetOfflineMode} />}
-          {tab === 'audios' && <AudioAdmin skaters={state.skaters} onUpdate={onUpdateSkater} />}
+          {tab === 'audios' && <AudioAdmin skaters={state.skaters} showSkaters={state.showSkaters} onUpdate={onUpdateSkater} />}
         </div>
         <footer className={`admin-save-bar ${saveStatus}`}>
           <span>{saveStatus === 'saved' ? 'Cambios guardados en la nube.' : saveStatus === 'offline' ? 'Guardado en este equipo. Se sincronizará al volver Internet.' : saveStatus === 'error' ? 'No se pudo guardar. Revisá la conexión.' : 'El guardado automático está activo.'}</span>
@@ -126,7 +126,7 @@ function VisibilityToggle({ checked, title, onChange }: { checked: boolean; titl
 }
 
 function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave: Props['onUpdateEvent']; onClearAll: Props['onClearAll'] }) {
-  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount, useHeats: state.useHeats })
+  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount, showSkaters: state.showSkaters, useHeats: state.useHeats })
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(values) }
   return <form className="admin-form" onSubmit={submit}>
     <div className="admin-intro"><h3>Datos del evento</h3><p>Estos datos aparecen en el panel del operador.</p></div>
@@ -135,11 +135,12 @@ function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave
     <div className="public-frame-admin"><div className="public-frame-preview">{values.publicFrame ? <img src={values.publicFrame} alt="Vista previa del marco público" /> : <span>Sin imagen</span>}</div><div><strong>Marco de la web del QR</strong><small>Se muestra como fondo alrededor del contenido en la página pública.</small><div className="public-frame-actions"><label className="file-btn">{values.publicFrame ? 'Cambiar imagen' : 'Cargar imagen'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeFrame(file, publicFrame => setValues(current => ({ ...current, publicFrame }))) }} /></label>{values.publicFrame && <button type="button" onClick={() => setValues(current => ({ ...current, publicFrame: '' }))}>Quitar marco</button>}</div></div></div>
     <label>Ubicación<input required placeholder="Ciudad, provincia" value={values.location} onChange={event => setValues({ ...values, location: event.target.value })} /></label>
     <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => setValues({ ...values, eventDate: event.target.value })} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => setValues({ ...values, startTime: event.target.value })} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => setValues({ ...values, countdownMinutes: Number(event.target.value) })} /></label></div>
-    <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial de cada patinadora.</small></label>
-    <label className="public-visibility"><input type="checkbox" checked={values.useHeats} onChange={event => setValues({ ...values, useHeats: event.target.checked })} /><span><strong>Usar tandas</strong><small>Desactivado: todas las patinadoras quedan en Tanda 1.</small></span></label>
+    <label className="public-visibility"><input type="checkbox" checked={values.showSkaters} onChange={event => setValues({ ...values, showSkaters: event.target.checked })} /><span><strong>Mostrar patinadoras</strong><small>Desmarcado: desaparecen nombres, números, listados y controles de patinadoras en operador y QR. Los datos no se borran.</small></span></label>
+    <label>Cantidad de etapas<select value={values.stageCount} onChange={event => setValues({ ...values, stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial del evento.</small></label>
+    {values.showSkaters && <label className="public-visibility"><input type="checkbox" checked={values.useHeats} onChange={event => setValues({ ...values, useHeats: event.target.checked })} /><span><strong>Usar tandas</strong><small>Desactivado: todas quedan en Tanda 1.</small></span></label>}
     <label>Duración de cada receso (minutos)<input type="number" min="1" required value={values.breakDurationMinutes} onChange={event => setValues({ ...values, breakDurationMinutes: Number(event.target.value) })} /><small className="field-help">Se usa para calcular la cuenta regresiva y la hora de finalización.</small></label>
     <button className="primary-save">Guardar cambios</button>
-    <div className="danger-zone"><div><strong>Borrar todo el evento</strong><small>Elimina patinadoras, clubes, seños, bufet, etapas y resultados para comenzar desde cero.</small></div><button type="button" onClick={() => window.confirm('¿Borrar absolutamente todos los datos del evento? Esta acción no se puede deshacer.') && window.confirm('Última confirmación: ¿querés dejar el sistema completamente en blanco?') && onClearAll()}>BORRAR TODO</button></div>
+    <div className="danger-zone"><div><strong>Borrar todo el evento</strong><small>Elimina clubes, seños, coreografías, bufet, etapas y resultados para comenzar desde cero.</small></div><button type="button" onClick={() => window.confirm('¿Borrar absolutamente todos los datos del evento? Esta acción no se puede deshacer.') && window.confirm('Última confirmación: ¿querés dejar el sistema completamente en blanco?') && onClearAll()}>BORRAR TODO</button></div>
   </form>
 }
 
@@ -226,7 +227,7 @@ function BackupAdmin({ state, savedEvents, onSave, onRestore, onDelete, onImport
   return <div><div className="admin-intro"><h3>Copias de seguridad</h3><p>Guardá el evento completo y recuperalo si se borran datos o se modifica algo por error.</p></div><div className="backup-current"><Save /><div><small>EVENTO ACTUAL</small><strong>{state.name || 'Evento sin nombre'}</strong><span>{state.skaters.length} patinadoras · {state.clubs.length} clubes · {state.teachers.length} seños</span></div><button onClick={() => void save()}>Guardar copia ahora</button></div><div className="backup-actions"><button onClick={download}>Descargar JSON</button><label className="file-btn">Importar JSON<input type="file" accept=".json,application/json" onChange={event => void load(event.target.files?.[0])} /></label></div>{message && <p className="backup-message">{message}</p>}<div className="saved-events"><div><strong>Copias guardadas en Supabase</strong><small>No se eliminan cuando usás “Borrar todo”.</small></div>{savedEvents.length ? savedEvents.map(saved => <div className="saved-event-row" key={saved.id}><span><b>{saved.name}</b><small>Guardada: {new Date(saved.savedAt).toLocaleString('es-AR')}</small></span><div className="backup-actions"><button type="button" onClick={() => window.confirm(`¿Restaurar ${saved.name}? Reemplazará el evento actual.`) && void onRestore(saved.id)}>Restaurar copia</button><button className="delete-backup" type="button" onClick={() => window.confirm(`¿Eliminar definitivamente la copia de ${saved.name}? El evento actual no se modificará.`) && void onDelete(saved.id)}>Eliminar copia</button></div></div>) : <p className="backup-empty">Todavía no hay copias guardadas.</p>}</div><div className="saved-events"><div><strong>Actividad reciente</strong><small>Últimos cambios conservados en el evento.</small></div>{state.auditLog.slice(-20).reverse().map(entry => <div className="saved-event-row" key={entry.id}><span><b>{entry.action}</b><small>{new Date(entry.at).toLocaleString('es-AR')} · {entry.detail}</small></span></div>)}</div></div>
 }
 
-function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props['onUpdateSkater'] }) {
+function AudioAdmin({ skaters, showSkaters, onUpdate }: { skaters: Skater[]; showSkaters: boolean; onUpdate: Props['onUpdateSkater'] }) {
   const select = async (skater: Skater, file?: File) => {
     if (!file) return
     if (!file.type.startsWith('audio/')) { window.alert('Seleccioná un archivo de audio válido.'); return }
@@ -236,5 +237,5 @@ function AudioAdmin({ skaters, onUpdate }: { skaters: Skater[]; onUpdate: Props[
     probe.onerror = () => window.alert(`No se pudo leer ${file.name}. Probá convertirlo a MP3, WAV u OGG.`)
   }
   const remove = async (skater: Skater) => { await removeTrack(skater.id); if (skater.audioUrl) URL.revokeObjectURL(skater.audioUrl); onUpdate(skater.id, { audioName: undefined, audioUrl: undefined, audioReady: false }) }
-  return <div><div className="admin-intro"><h3>Canciones</h3><p>Los archivos se guardan de forma persistente en este equipo y nunca se suben a Internet.</p></div><div className="audio-list">{skaters.map(skater => <div key={skater.id}><Music2 /><span><strong>{fullName(skater)}</strong><small>{skater.audioReady ? `✓ ${skater.audioName}` : skater.audioName ? `⚠ No disponible · ${skater.audioName}` : 'Sin archivo asociado'}</small></span><label className="file-btn">Seleccionar<input type="file" accept="audio/*" onChange={event => void select(skater, event.target.files?.[0])} /></label>{skater.audioUrl && <button onClick={() => void new Audio(skater.audioUrl).play()}>Escuchar</button>}{skater.audioName && <button onClick={() => void remove(skater)}>Quitar</button>}</div>)}</div></div>
+  return <div><div className="admin-intro"><h3>Canciones</h3><p>Los archivos se guardan de forma persistente en este equipo y nunca se suben a Internet.</p></div><div className="audio-list">{skaters.map(skater => <div key={skater.id}><Music2 /><span><strong>{showSkaters ? fullName(skater) : `${skater.club} · ${skater.track}`}</strong><small>{skater.audioReady ? `✓ ${skater.audioName}` : skater.audioName ? `⚠ No disponible · ${skater.audioName}` : 'Sin archivo asociado'}</small></span><label className="file-btn">Seleccionar<input type="file" accept="audio/*" onChange={event => void select(skater, event.target.files?.[0])} /></label>{skater.audioUrl && <button onClick={() => void new Audio(skater.audioUrl).play()}>Escuchar</button>}{skater.audioName && <button onClick={() => void remove(skater)}>Quitar</button>}</div>)}</div></div>
 }

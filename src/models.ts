@@ -74,6 +74,7 @@ export interface FestivalState {
   activeBreakAfter?: StageNumber
   breakEndsAt?: string
   stageCount: StageNumber
+  showSkaters: boolean
   useHeats: boolean
   currentStage: StageNumber
   completedStages: StageNumber[]

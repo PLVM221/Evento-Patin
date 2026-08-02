@@ -7,6 +7,9 @@
 | 16:13 | feat(patinadoras): tilde Participa excluye lesionadas de conducción y vista pública |
 | 16:13 | style(pista): Club, Coreografía/Tema y Seño pasan a ser datos principales |
 | 16:13 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+| 16:30 | feat(evento): tilde global Mostrar patinadoras oculta módulo, nombres y controles en operador y QR sin borrar datos |
+| 16:30 | style(evento): modo sin patinadoras prioriza Club, Coreografía/Tema y Seño |
+| 16:30 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 
 ### 2026-07-30
 

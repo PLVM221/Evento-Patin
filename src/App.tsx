@@ -142,6 +142,7 @@ function OperatorApp({ userId }: { userId: string }) {
       activeBreakAfter: state.activeBreakAfter,
       breakEndsAt: state.breakEndsAt,
       breakDurationMinutes: state.breakDurationMinutes,
+      showSkaters: state.showSkaters,
       showBuffet: state.showBuffet,
       showRaffle: state.showRaffle,
       useFrameOnBuffet: state.useFrameOnBuffet,
@@ -316,27 +317,27 @@ function OperatorApp({ userId }: { userId: string }) {
 
       <main>
         <section className="stats">
-          <div>
+          {state.showSkaters && <div>
             <Users />
             <span>
               <small>PARTICIPANTES ETAPA</small>
               <strong>{stageSkaters.length}</strong>
             </span>
-          </div>
-          <div>
+          </div>}
+          {state.showSkaters && <div>
             <Check />
             <span>
               <small>FINALIZADAS</small>
               <strong>{finished}</strong>
             </span>
-          </div>
-          <div>
+          </div>}
+          {state.showSkaters && <div>
             <Clock3 />
             <span>
               <small>RESTANTES</small>
               <strong>{stageSkaters.length - finished}</strong>
             </span>
-          </div>
+          </div>}
           <div className="stage-stat">
             <span>
               <small>ETAPA ACTUAL</small>
@@ -352,7 +353,7 @@ function OperatorApp({ userId }: { userId: string }) {
             </span>
             <em>45 s entre pasadas</em>
           </div>
-          <div className="search-wrap">
+          {state.showSkaters && <div className="search-wrap">
             <label className="search">
               <Search />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, club o número..." />
@@ -379,7 +380,7 @@ function OperatorApp({ userId }: { userId: string }) {
               </div>
             )}
             {query.trim() && suggestions.length === 0 && <div className="search-results empty-search">Sin coincidencias</div>}
-          </div>
+          </div>}
         </section>
 
         <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>
@@ -459,8 +460,8 @@ function OperatorApp({ userId }: { userId: string }) {
             </div>
             {active ? (
               <>
-                <div className="bib">Nº {active.number}</div>
-                <div className="active-identity"><div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><small>CLUB</small><h1>{active.club}</h1><p className="active-skater-name">Patinadora: {fullName(active)}</p></div></div>
+                {state.showSkaters && <div className="bib">Nº {active.number}</div>}
+                <div className="active-identity"><div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><small>CLUB</small><h1>{active.club}</h1>{state.showSkaters && <p className="active-skater-name">Patinadora: {fullName(active)}</p>}</div></div>
                 <div className="track">
                   <span>♫</span>
                   <div>
@@ -497,9 +498,9 @@ function OperatorApp({ userId }: { userId: string }) {
                   {next.lastName[0]}
                 </div>
                 <div>
-                  <small>PRÓXIMA PATINADORA · Nº {next.number}</small>
-                  <h2>{fullName(next)}</h2>
-                  <p>{next.club}</p>
+                  <small>{state.showSkaters ? `PRÓXIMA PATINADORA · Nº ${next.number}` : 'PRÓXIMA COREOGRAFÍA'}</small>
+                  <h2>{state.showSkaters ? fullName(next) : next.club}</h2>
+                  {state.showSkaters && <p>{next.club}</p>}
                   <span>
                     ♫ {next.track} · {formatTime(next.duration)}
                   </span>
@@ -511,10 +512,10 @@ function OperatorApp({ userId }: { userId: string }) {
               <div className="waiting-row" key={skater.id}>
                 <b>{index + 2}</b>
                 <div>
-                  <strong>{fullName(skater)}</strong>
-                  <small>{skater.club}</small>
+                  <strong>{state.showSkaters ? fullName(skater) : skater.club}</strong>
+                  <small>{state.showSkaters ? skater.club : skater.track}</small>
                 </div>
-                <span>{skater.number}</span>
+                {state.showSkaters && <span>{skater.number}</span>}
               </div>
             ))}
           </aside>
@@ -575,8 +576,8 @@ function OperatorApp({ userId }: { userId: string }) {
           </div>
         </section>
 
-        <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />
-        <ParticipatingClubs organizer={state.organizer} clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} />
+        {state.showSkaters && <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />}
+        <ParticipatingClubs organizer={state.organizer} clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} showSkaters={state.showSkaters} />
       </main>
       <audio ref={effectPlayer} preload="auto" />
 
@@ -596,7 +597,7 @@ function OperatorApp({ userId }: { userId: string }) {
         <span className="footer-time">JUE 30 JUL · 14:32</span>
       </footer>
 
-      {selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
+      {state.showSkaters && selected && <SkaterModal skater={selected} state={state} onClose={() => setSelected(undefined)} onStatus={setStatus} onMove={moveToPosition} />}
       {adminOpen && <AdminModal state={state} onClose={() => setAdminOpen(false)} onUpdateEvent={updateEvent} onAddSkater={addSkater} onImportSkaters={importSkaters} onImportEvent={importEvent} onUpdateSkater={updateSkater} onRemoveSkater={removeSkater} onRenameClub={renameClub} onAddClub={addClub} onRemoveClub={removeClub} onUpdateClubLogo={updateClubLogo} onAddTeacher={addTeacher} onRemoveTeacher={removeTeacher} onAddBuffetItem={addBuffetItem} onUpdateBuffetItem={updateBuffetItem} onRemoveBuffetItem={removeBuffetItem} onSetPublicSectionVisibility={setPublicSectionVisibility} onSetRaffleTicketPrice={setRaffleTicketPrice} onAddRafflePrice={addRafflePrice} onRemoveRafflePrice={removeRafflePrice} onAddRafflePrize={addRafflePrize} onUpdateRafflePrize={updateRafflePrize} onRemoveRafflePrize={removeRafflePrize} savedEvents={savedEvents} onSaveEvent={saveEvent} onSaveChanges={saveNow} onRestoreEvent={restoreEvent} onDeleteSavedEvent={deleteSavedEvent} offlineEnabled={offlineEnabled} onSetOfflineMode={setOfflineMode} onClearAll={() => { clearFestival(); setAdminOpen(false) }} />}
       {qrOpen && (
         <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
@@ -645,10 +646,10 @@ function OperatorApp({ userId }: { userId: string }) {
   )
 }
 
-function ParticipatingClubs({ organizer, clubs, clubLogos, teachers, skaters, onSelect }: { organizer: string; clubs: string[]; clubLogos: Record<string, string>; teachers: Teacher[]; skaters: Array<{ club: string }>; onSelect?: (club: string) => void }) {
+function ParticipatingClubs({ organizer, clubs, clubLogos, teachers, skaters, showSkaters, onSelect }: { organizer: string; clubs: string[]; clubLogos: Record<string, string>; teachers: Teacher[]; skaters: Array<{ club: string }>; showSkaters: boolean; onSelect?: (club: string) => void }) {
   const participating = clubs.filter((club) => club.trim().toLowerCase() !== organizer.trim().toLowerCase() && skaters.some((skater) => skater.club === club))
   if (participating.length === 0) return null
-  return <section className="participating-clubs"><div className="clubs-heading"><small>COMUNIDAD DEL EVENTO</small><h2>Clubes invitados</h2><p>{onSelect ? 'Tocá un club para conocer su equipo y orden de pasada.' : 'Cada equipo junto a sus seños responsables.'}</p></div><div className="clubs-grid">{participating.map((club) => { const clubTeachers = teachers.filter((teacher) => teacher.club === club); const count = skaters.filter((skater) => skater.club === club).length; const initials = club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase(); const content = <><div className="club-monogram">{clubLogos[club] ? <img src={clubLogos[club]} alt={`Escudo de ${club}`} /> : initials}</div><div><strong>{club}</strong><span>{count} {count === 1 ? 'patinadora' : 'patinadoras'}</span><small>{clubTeachers.length ? `Seño${clubTeachers.length > 1 ? 's' : ''}: ${clubTeachers.map((teacher) => teacher.name).join(' · ')}` : 'Seño pendiente de asignación'}</small></div></>; return onSelect ? <button className="club-card" key={club} onClick={() => onSelect(club)}>{content}<ChevronRight /></button> : <article key={club}>{content}</article> })}</div></section>
+  return <section className="participating-clubs"><div className="clubs-heading"><small>COMUNIDAD DEL EVENTO</small><h2>Clubes invitados</h2><p>{onSelect ? 'Tocá un club para conocer sus coreografías y seños.' : 'Cada equipo junto a sus seños responsables.'}</p></div><div className="clubs-grid">{participating.map((club) => { const clubTeachers = teachers.filter((teacher) => teacher.club === club); const count = skaters.filter((skater) => skater.club === club).length; const initials = club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase(); const content = <><div className="club-monogram">{clubLogos[club] ? <img src={clubLogos[club]} alt={`Escudo de ${club}`} /> : initials}</div><div><strong>{club}</strong>{showSkaters && <span>{count} {count === 1 ? 'patinadora' : 'patinadoras'}</span>}<small>{clubTeachers.length ? `Seño${clubTeachers.length > 1 ? 's' : ''}: ${clubTeachers.map((teacher) => teacher.name).join(' · ')}` : 'Seño pendiente de asignación'}</small></div></>; return onSelect ? <button className="club-card" key={club} onClick={() => onSelect(club)}>{content}<ChevronRight /></button> : <article key={club}>{content}</article> })}</div></section>
 }
 
 function PlayIcon() {
@@ -730,7 +731,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -752,7 +753,7 @@ function PublicView({ state }: { state: PublicState }) {
     const clubSkaters = live.skaters.filter((skater) => skater.club === selectedClub)
     const clubTeachers = (live.teachers ?? []).filter((teacher) => teacher.club === selectedClub)
     const initials = selectedClub.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()
-    return <main className="public-view public-subpage"><button className="public-back" onClick={() => setSelectedClub(undefined)}><ChevronLeft /> Volver</button><header className="club-detail-head"><div className="club-detail-logo">{live.clubLogos?.[selectedClub] ? <img src={live.clubLogos[selectedClub]} alt={`Escudo de ${selectedClub}`} /> : initials}</div><div><small>CLUB INVITADO</small><h1>{selectedClub}</h1></div></header><section className="club-teachers"><small>SEÑO{clubTeachers.length > 1 ? 'S' : ''}</small><strong>{clubTeachers.length ? clubTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></section><h2 className="public-list-title">Patinadoras y orden de pasada</h2><div className="club-skater-list">{clubSkaters.map((skater) => { const stageIds = live.stageOrders[skater.stageNumber] ?? live.skaters.filter((item) => item.stageNumber === skater.stageNumber).map((item) => item.id); const position = stageIds.indexOf(skater.id) + 1; return <article key={skater.id}><div><strong>{fullName(skater as Skater)}</strong><small>{skater.track}</small></div><span>Etapa {skater.stageNumber}<strong>Posición {position}</strong></span></article> })}</div></main>
+    return <main className="public-view public-subpage"><button className="public-back" onClick={() => setSelectedClub(undefined)}><ChevronLeft /> Volver</button><header className="club-detail-head"><div className="club-detail-logo">{live.clubLogos?.[selectedClub] ? <img src={live.clubLogos[selectedClub]} alt={`Escudo de ${selectedClub}`} /> : initials}</div><div><small>CLUB INVITADO</small><h1>{selectedClub}</h1></div></header><section className="club-teachers"><small>SEÑO{clubTeachers.length > 1 ? 'S' : ''}</small><strong>{clubTeachers.length ? clubTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></section><h2 className="public-list-title">{live.showSkaters ? 'Patinadoras y orden de pasada' : 'Coreografías y orden de pasada'}</h2><div className="club-skater-list">{clubSkaters.map((skater) => { const stageIds = live.stageOrders[skater.stageNumber] ?? live.skaters.filter((item) => item.stageNumber === skater.stageNumber).map((item) => item.id); const position = stageIds.indexOf(skater.id) + 1; return <article key={skater.id}><div><strong>{live.showSkaters ? fullName(skater as Skater) : skater.track}</strong>{live.showSkaters && <small>{skater.track}</small>}</div><span>Etapa {skater.stageNumber}<strong>Posición {position}</strong></span></article> })}</div></main>
   }
   if (buffetOpen) return <main className={`public-view public-subpage${live.useFrameOnBuffet && live.publicFrame ? ' public-framed' : ''}`} style={live.useFrameOnBuffet ? frameStyle : undefined}><button className="public-back" onClick={() => setBuffetOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head"><ShoppingBasket /><div><small>PRECIOS DEL EVENTO</small><h1>Bufet</h1></div></header><div className="public-buffet-list">{(live.buffetItems ?? []).map((item) => <article key={item.id}><strong>{item.name}</strong><b>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</b></article>)}{!live.buffetItems?.length && <p>El menú todavía no fue cargado.</p>}</div></main>
   if (raffleOpen) return <main className={`public-view public-subpage${live.useFrameOnRaffle && live.publicFrame ? ' public-framed' : ''}`} style={live.useFrameOnRaffle ? frameStyle : undefined}><button className="public-back" onClick={() => setRaffleOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head raffle-head"><Trophy /><div><small>SORTEO DEL EVENTO</small><h1>Premios</h1></div></header><div className="public-raffle-prices">{(live.rafflePrices ?? []).map(item => <article key={item.id}><strong>{item.quantity} {item.quantity === 1 ? 'número' : 'números'}</strong><b>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</b></article>)}{!live.rafflePrices?.length && <p>Valores a confirmar.</p>}</div><div className="public-raffle-list">{[...(live.rafflePrizes ?? [])].sort((a, b) => a.order - b.order).map(prize => <article key={prize.id}><b>{prize.order}°</b><strong>{prize.name}</strong>{prize.winningNumber ? <span className="winner"><small>NÚMERO GANADOR</small><em>{prize.winningNumber}</em></span> : <span>Pendiente de sorteo</span>}</article>)}{!live.rafflePrizes?.length && <p>Los premios todavía no fueron cargados.</p>}</div></main>
@@ -796,8 +797,8 @@ function PublicView({ state }: { state: PublicState }) {
                       <div className="public-row" key={id}>
                         <b>{order + 1}</b>
                         <span>
-                          {fullName(skater as Skater)}
-                          <small>{skater.club}</small>
+                          {live.showSkaters ? fullName(skater as Skater) : skater.club}
+                          {live.showSkaters && <small>{skater.club}</small>}
                         </span>
                         <em>{skater.track}</em>
                       </div>
@@ -813,14 +814,14 @@ function PublicView({ state }: { state: PublicState }) {
           <section className="public-now">
             <small>EN PISTA</small>
             <div className="public-active-main">{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>CLUB</small><h2>{active?.club ?? 'En preparación'}</h2></div></div>
-            {active && <div className="public-coreography"><small>COREOGRAFÍA / TEMA</small><strong>{active.track}</strong><span>Patinadora: {fullName(active as Skater)}</span></div>}
+            {active && <div className="public-coreography"><small>COREOGRAFÍA / TEMA</small><strong>{active.track}</strong>{live.showSkaters && <span>Patinadora: {fullName(active as Skater)}</span>}</div>}
             {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>
           <div className="public-columns">
             <div>
               <small>A CONTINUACIÓN</small>
-              <h3>{pending[0] ? fullName(pending[0] as Skater) : '—'}</h3>
-              <p>{pending[0]?.club}</p>
+              <h3>{pending[0] ? (live.showSkaters ? fullName(pending[0] as Skater) : pending[0].club) : '—'}</h3>
+              <p>{live.showSkaters ? pending[0]?.club : pending[0]?.track}</p>
             </div>
             <div>
               <small>YA PASARON</small>
@@ -831,20 +832,20 @@ function PublicView({ state }: { state: PublicState }) {
               <strong>{pending.length}</strong>
             </div>
           </div>
-          <h3 className="public-list-title">Próximas patinadoras</h3>
+          <h3 className="public-list-title">{live.showSkaters ? 'Próximas patinadoras' : 'Próximas coreografías'}</h3>
           {pending.slice(1, 8).map((skater, index) => (
             <div className="public-row" key={skater.id}>
               <b>{index + 2}</b>
               <span>
-                {fullName(skater as Skater)}
-                <small>{skater.club}</small>
+                {live.showSkaters ? fullName(skater as Skater) : skater.club}
+                {live.showSkaters && <small>{skater.club}</small>}
               </span>
               <em>{skater.track}</em>
             </div>
           ))}
         </>
       )}
-      <ParticipatingClubs organizer={live.organizer} clubs={live.clubs ?? []} clubLogos={live.clubLogos ?? {}} teachers={live.teachers ?? []} skaters={live.skaters} onSelect={setSelectedClub} />
+      <ParticipatingClubs organizer={live.organizer} clubs={live.clubs ?? []} clubLogos={live.clubLogos ?? {}} teachers={live.teachers ?? []} skaters={live.skaters} showSkaters={live.showSkaters} onSelect={setSelectedClub} />
       <div className="public-credit">
         Desarrollado por <strong>PLVM Soft</strong>
       </div>

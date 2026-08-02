@@ -13,6 +13,7 @@ export const initialFestival: FestivalState = {
   countdownMinutes: 30,
   breakDurationMinutes: 20,
   stageCount: 2,
+  showSkaters: true,
   useHeats: false,
   currentStage: 1,
   completedStages: [],
