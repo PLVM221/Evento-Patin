@@ -248,7 +248,7 @@ export function useFestival(userId = 'public') {
     const active = current.skaters.find(skater => enabled(skater) && skater.id === current.activeId && skater.stageNumber === current.currentStage && skater.status !== 'ABSENT')
       ?? current.skaters.find(skater => enabled(skater) && skater.stageNumber === current.currentStage && (skater.status === 'PENDING' || skater.status === 'READY' || skater.status === 'POSTPONED'))
     if (!active) return current
-    return { ...current, started: true, completedStages: current.completedStages.filter(stage => stage !== current.currentStage), activeId: active.id, skaters: current.skaters.map(skater => skater.id === active.id ? { ...skater, status: 'SKATING' } : skater) }
+    return { ...current, started: true, actualStartedAt: current.actualStartedAt ?? new Date().toISOString(), completedStages: current.completedStages.filter(stage => stage !== current.currentStage), activeId: active.id, skaters: current.skaters.map(skater => skater.id === active.id ? { ...skater, status: 'SKATING' } : skater) }
   }, 'Iniciar evento', 'Comenzó la reproducción de la etapa actual')
 
   const finishAndNext = () => update(current => {
@@ -291,6 +291,7 @@ export function useFestival(userId = 'public') {
     completedStages: [],
     stageOrders: {},
     started: false,
+    actualStartedAt: undefined,
     activeBreakAfter: undefined,
     breakEndsAt: undefined,
     activeId: current.skaters.find(skater => (current.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club') && skater.stageNumber === 1)?.id,
@@ -327,7 +328,7 @@ export function useFestival(userId = 'public') {
     const ordered = [...orderedStage, ...otherStages]
     const eligible = orderedStage.filter(skater => (current.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club') && skater.status !== 'ABSENT')
     const first = eligible[0]
-    return { ...current, currentStage: nextStage, started: true, activeBreakAfter: undefined, breakEndsAt: undefined, elapsed: 0, activeId: first?.id, skaters: ordered.map(skater => skater.stageNumber === nextStage ? ({ ...skater, status: skater.id === first?.id ? 'SKATING' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' }) : skater) }
+    return { ...current, currentStage: nextStage, started: true, actualStartedAt: current.actualStartedAt ?? new Date().toISOString(), activeBreakAfter: undefined, breakEndsAt: undefined, elapsed: 0, activeId: first?.id, skaters: ordered.map(skater => skater.stageNumber === nextStage ? ({ ...skater, status: skater.id === first?.id ? 'SKATING' : skater.status === 'ABSENT' ? 'ABSENT' : 'PENDING' }) : skater) }
   })
 
   const startBreak = (afterStage: StageNumber) => update(current => current.completedStages.includes(afterStage) && current.currentStage === afterStage && !current.started ? ({ ...current, activeBreakAfter: afterStage, breakEndsAt: new Date(Date.now() + current.breakDurationMinutes * 60000).toISOString() }) : current)

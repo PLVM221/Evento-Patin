@@ -19,6 +19,7 @@ export const initialFestival: FestivalState = {
   completedStages: [],
   stageOrders: {},
   started: false,
+  actualStartedAt: undefined,
   clubs: ['Club Atlético Provincial', 'Club Horizonte', 'Club Regatas', 'Estrella del Sur', 'Unión Central'],
   clubLogos: {},
   teachers: [

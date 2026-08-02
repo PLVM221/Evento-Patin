@@ -19,6 +19,9 @@
 | 18:55 | fix(qr): polling de respaldo cada 5 segundos recupera cambios perdidos por tiempo real |
 | 18:55 | fix(mobile): estado sin club activo deja de cortarse letra por letra y usa tarjeta responsive |
 | 18:55 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+| 19:10 | fix(inicio): inicio manual guarda hora real y cancela definitivamente cuenta regresiva programada |
+| 19:10 | fix(qr): cuenta regresiva no reaparece entre etapas ni durante torneo iniciado |
+| 19:10 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 
 ### 2026-07-30
 

@@ -139,6 +139,7 @@ function OperatorApp({ userId }: { userId: string }) {
       stageCount: state.stageCount,
       currentStage: state.currentStage,
       started: state.started,
+      actualStartedAt: state.actualStartedAt,
       activeBreakAfter: state.activeBreakAfter,
       breakEndsAt: state.breakEndsAt,
       breakDurationMinutes: state.breakDurationMinutes,
@@ -387,13 +388,14 @@ function OperatorApp({ userId }: { userId: string }) {
 
         <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>
         <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
-        {!state.started && state.completedStages.length === 0 && (
+        {!state.actualStartedAt && state.completedStages.length === 0 && (
           <div className="operator-countdown">
             <span>EL EVENTO COMIENZA EN</span>
             <strong>{countdown}</strong>
             <small>HORAS · MINUTOS · SEGUNDOS</small>
           </div>
         )}
+        {state.actualStartedAt && <div className="operator-started">TORNEO INICIADO · {new Date(state.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>}
 
         <div className="stage-controls">
           {Array.from({ length: state.stageCount }, (_, index) => {
@@ -738,7 +740,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'started' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'started' | 'actualStartedAt' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -774,7 +776,7 @@ function PublicView({ state }: { state: PublicState }) {
       <h1>{live.name}</h1>
       <div className="public-organizer">
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
-        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}</span></div>
+        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span></div>
       </div>
       {live.activeBreakAfter ? (
         <div className="public-break">
@@ -783,7 +785,7 @@ function PublicView({ state }: { state: PublicState }) {
           <span>Finaliza a las {new Date(live.breakEndsAt!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
           <em>A continuación: Etapa {live.activeBreakAfter + 1}</em>
         </div>
-      ) : !live.started ? (
+      ) : !live.actualStartedAt ? (
         <>
           <div className="public-countdown">
             <span>Comienza en</span>

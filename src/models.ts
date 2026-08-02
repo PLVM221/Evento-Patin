@@ -81,6 +81,7 @@ export interface FestivalState {
   completedStages: StageNumber[]
   stageOrders: Partial<Record<StageNumber, string[]>>
   started: boolean
+  actualStartedAt?: string
   clubs: string[]
   clubLogos: Record<string, string>
   teachers: Teacher[]
