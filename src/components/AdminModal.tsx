@@ -130,21 +130,36 @@ function VisibilityToggle({ checked, title, onChange }: { checked: boolean; titl
 function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave: Props['onUpdateEvent']; onClearAll: Props['onClearAll'] }) {
   const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount, showSkaters: state.showSkaters, useHeats: state.useHeats })
   const saveTimer = useRef<number | undefined>(undefined)
-  const commit = (changes: Partial<typeof values>) => {
+  const pendingValues = useRef<typeof values | undefined>(undefined)
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
+  const commit = (changes: Partial<typeof values>, immediate = false) => {
     const next = { ...values, ...changes }
     setValues(next)
     window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(() => onSave(next), 400)
+    pendingValues.current = next
+    if (immediate) {
+      pendingValues.current = undefined
+      onSave(next)
+      return
+    }
+    saveTimer.current = window.setTimeout(() => {
+      pendingValues.current = undefined
+      onSave(next)
+    }, 400)
   }
-  const submit = (event: FormEvent) => { event.preventDefault(); window.clearTimeout(saveTimer.current); onSave(values) }
-  useEffect(() => () => window.clearTimeout(saveTimer.current), [])
+  const submit = (event: FormEvent) => { event.preventDefault(); window.clearTimeout(saveTimer.current); pendingValues.current = undefined; onSave(values) }
+  useEffect(() => () => {
+    window.clearTimeout(saveTimer.current)
+    if (pendingValues.current) onSaveRef.current(pendingValues.current)
+  }, [])
   return <form className="admin-form" onSubmit={submit}>
     <div className="admin-intro"><h3>Datos del evento</h3><p>Se actualizan automáticamente en el panel y en la web del QR.</p></div>
     <label>Nombre del evento<input required value={values.name} onChange={event => commit({ name: event.target.value })} /></label>
     <div className="organizer-admin"><div className="organizer-logo-preview">{values.organizerLogo ? <img src={values.organizerLogo} alt="Escudo del club organizador" /> : values.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div><label>Club organizador<input required value={values.organizer} onChange={event => commit({ organizer: event.target.value })} /></label><label className="file-btn">{values.organizerLogo ? 'Cambiar escudo' : 'Cargar escudo'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeImage(file, organizerLogo => commit({ organizerLogo })) }} /></label></div>
     <div className="public-frame-admin"><div className="public-frame-preview">{values.publicFrame ? <img src={values.publicFrame} alt="Vista previa del marco público" /> : <span>Sin imagen</span>}</div><div><strong>Marco de la web del QR</strong><small>Se muestra como fondo alrededor del contenido en la página pública.</small><div className="public-frame-actions"><label className="file-btn">{values.publicFrame ? 'Cambiar imagen' : 'Cargar imagen'}<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) optimizeFrame(file, publicFrame => commit({ publicFrame })) }} /></label>{values.publicFrame && <button type="button" onClick={() => commit({ publicFrame: '' })}>Quitar marco</button>}</div></div></div>
     <label>Ubicación<input required placeholder="Ciudad, provincia" value={values.location} onChange={event => commit({ location: event.target.value })} /></label>
-    <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => commit({ eventDate: event.target.value })} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => commit({ startTime: event.target.value })} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => commit({ countdownMinutes: Number(event.target.value) })} /></label></div>
+    <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => commit({ eventDate: event.target.value }, true)} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => commit({ startTime: event.target.value }, true)} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => commit({ countdownMinutes: Number(event.target.value) })} /></label></div>
     <label className="public-visibility"><input type="checkbox" checked={values.showSkaters} onChange={event => commit({ showSkaters: event.target.checked })} /><span><strong>Mostrar patinadoras</strong><small>Desmarcado: desaparecen nombres, números, listados y controles de patinadoras en operador y QR. Los datos no se borran.</small></span></label>
     <label>Cantidad de etapas<select value={values.stageCount} onChange={event => commit({ stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 etapa</option><option value="2">2 etapas</option><option value="3">3 etapas</option></select><small className="field-help">Se aplica a las pasadas y al historial del evento.</small></label>
     {values.showSkaters && <label className="public-visibility"><input type="checkbox" checked={values.useHeats} onChange={event => commit({ useHeats: event.target.checked })} /><span><strong>Usar tandas</strong><small>Desactivado: todas quedan en Tanda 1.</small></span></label>}
