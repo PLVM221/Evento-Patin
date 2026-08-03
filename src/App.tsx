@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, ShoppingBasket, Sparkles, Trophy, Undo2, Users, Volume2 } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, ShoppingBasket, Sparkles, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
 import QRCode from 'qrcode'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
@@ -56,7 +56,9 @@ function OperatorApp({ userId }: { userId: string }) {
   })
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const playingSoundRef = useRef<string | undefined>(undefined)
+  const fadeFrameRef = useRef<number | undefined>(undefined)
   const [playingSoundId, setPlayingSoundId] = useState<string>()
+  const [soundFading, setSoundFading] = useState(false)
   const customSoundInput = useRef<HTMLInputElement>(null)
   const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
   const [soundEditorOpen, setSoundEditorOpen] = useState(false)
@@ -205,9 +207,33 @@ function OperatorApp({ userId }: { userId: string }) {
   }
 
   const finishSound = useCallback(() => {
+    if (fadeFrameRef.current !== undefined) window.cancelAnimationFrame(fadeFrameRef.current)
+    fadeFrameRef.current = undefined
     playingSoundRef.current = undefined
     setPlayingSoundId(undefined)
+    setSoundFading(false)
   }, [])
+
+  const fadeOutSound = useCallback(() => {
+    const player = effectPlayer.current
+    if (!player || !playingSoundRef.current || fadeFrameRef.current !== undefined) return
+    const startedAt = performance.now()
+    const initialVolume = player.volume
+    setSoundFading(true)
+    const fade = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / 3000)
+      player.volume = initialVolume * (1 - progress)
+      if (progress < 1 && !player.ended) {
+        fadeFrameRef.current = window.requestAnimationFrame(fade)
+        return
+      }
+      fadeFrameRef.current = undefined
+      player.pause()
+      player.currentTime = 0
+      finishSound()
+    }
+    fadeFrameRef.current = window.requestAnimationFrame(fade)
+  }, [finishSound])
 
   const playEffect = useCallback(
     (id: string, file: string, gain = 1, custom = false) => {
@@ -541,11 +567,14 @@ function OperatorApp({ userId }: { userId: string }) {
                 Administrar botones
               </button>
             </span>
-            <label>
-              <Volume2 />
-              <input type="range" min="0" max="100" value={state.effectsVolume} onChange={(event) => setVolume('effectsVolume', Number(event.target.value))} />
-              <b>{state.effectsVolume}%</b>
-            </label>
+            <div className="sound-controls">
+              <button className={`fade-sound${soundFading ? ' active' : ''}`} disabled={!playingSoundId || soundFading} onClick={fadeOutSound}><VolumeX />{soundFading ? 'DISMINUYENDO…' : 'DISMINUIR · 3 SEG'}</button>
+              <label>
+                <Volume2 />
+                <input type="range" min="0" max="100" value={state.effectsVolume} onChange={(event) => setVolume('effectsVolume', Number(event.target.value))} />
+                <b>{state.effectsVolume}%</b>
+              </label>
+            </div>
           </div>
           <div className="sound-buttons">
             {soundButtons.map((button) => (
