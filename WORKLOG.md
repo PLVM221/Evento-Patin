@@ -11,6 +11,7 @@
 | 10:57 | style(qr): seño y nombre de coreografía reciben mayor tamaño para lectura a distancia |
 | 11:02 | style(qr): sección y ficha de clubes invitados ampliadas para mejorar legibilidad |
 | 11:12 | feat(soundboard): botón activo se destaca y todos los audios quedan bloqueados hasta finalizar reproducción |
+| 11:20 | feat(clubes): próximo club muestra su escudo en panel de locutor y web QR |
 
 ### 2026-08-02
 

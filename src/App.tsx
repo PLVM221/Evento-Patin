@@ -507,8 +507,7 @@ function OperatorApp({ userId }: { userId: string }) {
             {next && (
               <div className="next-person">
                 <div className="avatar">
-                  {next.firstName[0]}
-                  {next.lastName[0]}
+                  {(state.clubLogos[next.club] || (next.club === state.organizer ? state.organizerLogo : '')) ? <img src={state.clubLogos[next.club] || state.organizerLogo} alt={`Escudo de ${next.club}`} /> : next.club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}
                 </div>
                 <div>
                   <small>{state.showSkaters ? `PRÓXIMA PATINADORA · Nº ${next.number}` : 'PRÓXIMA COREOGRAFÍA'}</small>
@@ -838,10 +837,13 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
             {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>
           <div className="public-columns">
-            <div>
-              <small>A CONTINUACIÓN</small>
-              <h3>{pending[0] ? (live.showSkaters ? fullName(pending[0] as Skater) : pending[0].club) : '—'}</h3>
-              <p>{live.showSkaters ? pending[0]?.club : pending[0]?.track}</p>
+            <div className="public-next">
+              {pending[0] && <div className="public-next-logo">{(live.clubLogos?.[pending[0].club] || (pending[0].club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[pending[0].club] || live.organizerLogo} alt={`Escudo de ${pending[0].club}`} /> : pending[0].club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>}
+              <div>
+                <small>A CONTINUACIÓN</small>
+                <h3>{pending[0] ? (live.showSkaters ? fullName(pending[0] as Skater) : pending[0].club) : '—'}</h3>
+                <p>{live.showSkaters ? pending[0]?.club : pending[0]?.track}</p>
+              </div>
             </div>
             <div>
               <small>YA PASARON</small>
