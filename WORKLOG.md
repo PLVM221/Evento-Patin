@@ -1,5 +1,11 @@
 # WORKLOG
 
+### 2026-08-03
+
+| Hora | Cambio |
+|------|--------|
+| 10:01 | feat(auth): recuperación de contraseña por correo y formulario para definir una clave nueva |
+
 ### 2026-08-02
 
 | Hora | Cambio |
