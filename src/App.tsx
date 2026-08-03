@@ -178,10 +178,16 @@ function OperatorApp({ userId }: { userId: string }) {
       })),
     }
     const publicSnapshot = { ...snapshot, buffetItems: state.buffetItems, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, clubLogos: state.clubLogos }
-    const publish = () => { void supabase.rpc('publish_event_snapshot', { p_channel: liveChannel, p_data: publicSnapshot }) }
-    const timer = window.setTimeout(publish, 350)
+    const publish = () => {
+      void supabase.rpc('publish_event_snapshot', { p_channel: liveChannel, p_data: publicSnapshot }).then(({ error }) => {
+        if (error) console.error('No se pudo actualizar la web QR:', error.message)
+      })
+    }
+    const timer = window.setTimeout(publish, 250)
+    const heartbeat = window.setInterval(publish, 5000)
     return () => {
       window.clearTimeout(timer)
+      window.clearInterval(heartbeat)
     }
   }, [state, liveChannel, publicChannel])
 

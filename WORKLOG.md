@@ -14,6 +14,7 @@
 | 11:20 | feat(clubes): próximo club muestra su escudo en panel de locutor y web QR |
 | 11:28 | feat(soundboard): control general disminuye cualquier audio durante 3 segundos y luego lo detiene |
 | 12:22 | fix(evento): fecha y hora sincronizan inmediatamente y borradores pendientes se guardan al cerrar |
+| 12:31 | fix(qr): republicación cada 5 segundos evita que trigger antiguo restaure fecha, hora o inicio obsoletos |
 
 ### 2026-08-02
 
