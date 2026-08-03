@@ -190,7 +190,7 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
       <input placeholder="Nombre" required value={form.firstName} onChange={event => setForm({ ...form, firstName: event.target.value })} />
       <input placeholder="Apellido" required value={form.lastName} onChange={event => setForm({ ...form, lastName: event.target.value })} />
       <select aria-label="Club" required value={form.club} onChange={event => setForm({ ...form, club: event.target.value })}><option value="">Seleccionar club</option>{state.clubs.map(club => <option key={club}>{club}</option>)}</select>
-      <input placeholder="Coreografía / canción" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
+      <input placeholder="Coreografía" required value={form.track} onChange={event => setForm({ ...form, track: event.target.value })} />
       {state.useHeats && <select value={form.heat} onChange={event => setForm({ ...form, heat: event.target.value })}><option>Tanda 1</option><option>Tanda 2</option><option>Tanda 3</option></select>}
       <select aria-label="Etapa" value={form.stageNumber} onChange={event => setForm({ ...form, stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select>
       <button><Plus /> Agregar</button>

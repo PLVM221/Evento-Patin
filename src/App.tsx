@@ -296,7 +296,7 @@ function OperatorApp({ userId }: { userId: string }) {
 
   const downloadEventList = () => {
     const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
-    const rows: Array<Array<string | number>> = [['Evento', state.name], ['Club organizador', state.organizer], ['Cantidad de etapas', state.stageCount], [], ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía / Canción']]
+    const rows: Array<Array<string | number>> = [['Evento', state.name], ['Club organizador', state.organizer], ['Cantidad de etapas', state.stageCount], [], ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía']]
     for (let stage = 1; stage <= state.stageCount; stage += 1) {
       const savedOrder = state.stageOrders[stage as 1 | 2 | 3]
       const ordered = savedOrder ? savedOrder.map((id) => state.skaters.find((skater) => skater.id === id)).filter((skater): skater is Skater => Boolean(skater)) : state.skaters.filter((skater) => skater.stageNumber === stage)
@@ -510,7 +510,7 @@ function OperatorApp({ userId }: { userId: string }) {
                 <div className="track">
                   <span>♫</span>
                   <div>
-                    <small>COREOGRAFÍA / CANCIÓN</small>
+                    <small>COREOGRAFÍA</small>
                     <strong>{active.track}</strong>
                     <em>{active.category}</em>
                   </div>
@@ -868,7 +868,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
           <section className="public-now">
             <small>EN PISTA</small>
             <div className={`public-active-main${active ? '' : ' no-active'}`}>{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>{active ? 'CLUB' : 'ESTADO'}</small><h2>{active?.club ?? 'Esperando primera pasada'}</h2></div></div>
-            {active && <div className="public-coreography"><small>COREOGRAFÍA / TEMA</small><strong>{active.track}</strong>{live.showSkaters && <span>Patinadora: {fullName(active as Skater)}</span>}</div>}
+            {active && <div className="public-coreography"><small>COREOGRAFÍA</small><strong>{active.track}</strong>{live.showSkaters && <span>Patinadora: {fullName(active as Skater)}</span>}</div>}
             {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>
           <div className="public-columns">

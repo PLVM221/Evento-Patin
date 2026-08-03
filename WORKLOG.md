@@ -16,6 +16,7 @@
 | 12:22 | fix(evento): fecha y hora sincronizan inmediatamente y borradores pendientes se guardan al cerrar |
 | 12:31 | fix(qr): republicación cada 5 segundos evita que trigger antiguo restaure fecha, hora o inicio obsoletos |
 | 13:00 | fix(qr): escudo en pista deja libre etiqueta Club y hora real usa formato 24 horas sin corte AM/PM |
+| 13:06 | copy(ui): etiquetas de tema y canción simplificadas a Coreografía |
 
 ### 2026-08-02
 
