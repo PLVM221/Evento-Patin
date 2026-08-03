@@ -7,6 +7,7 @@ begin
     'name', new.data->'name', 'organizer', new.data->'organizer', 'organizerLogo', new.data->'organizerLogo',
     'publicFrame', new.data->'publicFrame', 'location', new.data->'location', 'eventDate', new.data->'eventDate',
     'startTime', new.data->'startTime', 'stageCount', new.data->'stageCount', 'currentStage', new.data->'currentStage',
+    'completedStages', new.data->'completedStages',
     'started', new.data->'started', 'actualStartedAt', new.data->'actualStartedAt',
     'activeBreakAfter', new.data->'activeBreakAfter', 'breakEndsAt', new.data->'breakEndsAt',
     'breakDurationMinutes', new.data->'breakDurationMinutes', 'showSkaters', new.data->'showSkaters',

@@ -139,6 +139,7 @@ function OperatorApp({ userId }: { userId: string }) {
       startTime: state.startTime,
       stageCount: state.stageCount,
       currentStage: state.currentStage,
+      completedStages: state.completedStages,
       started: state.started,
       actualStartedAt: state.actualStartedAt,
       activeBreakAfter: state.activeBreakAfter,
@@ -743,7 +744,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'started' | 'actualStartedAt' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'completedStages' | 'started' | 'actualStartedAt' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -758,6 +759,8 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
   const pending = live.skaters.filter((skater) => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))
   const countdown = useCountdown(live.eventDate, live.startTime)
   const breakCountdown = useRemainingUntil(live.breakEndsAt)
+  const firstStageStarting = !live.actualStartedAt && countdown === '00:00:00'
+  const nextStageStarting = !live.started && live.currentStage < live.stageCount && (live.completedStages ?? []).includes(live.currentStage) && (!live.activeBreakAfter || breakCountdown === '00:00:00')
   const byId = new Map(live.skaters.map((skater) => [skater.id, skater]))
   const frameStyle = live.publicFrame ? { backgroundImage: `linear-gradient(#f3f6fcd9, #f3f6fcd9), url("${live.publicFrame}")` } : undefined
   if (selectedClub) {
@@ -780,7 +783,13 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
         <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span></div>
       </div>
-      {live.activeBreakAfter ? (
+      {firstStageStarting || nextStageStarting ? (
+        <div className="public-starting">
+          <small>{firstStageStarting ? 'TODO LISTO' : `PRÓXIMA: ETAPA ${live.currentStage + 1}`}</small>
+          <strong>{firstStageStarting ? 'El show está por comenzar' : 'La próxima etapa está por comenzar'}</strong>
+          <span>En instantes comenzamos.</span>
+        </div>
+      ) : live.activeBreakAfter ? (
         <div className="public-break">
           <small>RECESO EN CURSO</small>
           <strong>{breakCountdown}</strong>
