@@ -49,6 +49,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const [qrOpen, setQrOpen] = useState(false)
   const [qrImage, setQrImage] = useState('')
   const [relayState, setRelayState] = useState<Partial<PublicState>>({})
+  const [publicConnected, setPublicConnected] = useState(false)
   const [liveChannel] = useState(() => {
     if (userId !== 'public') return `pista-${userId}`
     return new URLSearchParams(window.location.search).get('publico') ?? `pista-${createId()}`
@@ -182,15 +183,17 @@ function OperatorApp({ userId }: { userId: string }) {
   useEffect(() => {
     if (!publicChannel) return
     let active = true
-    const refresh = () => void supabase.from('public_event_state').select('data').eq('channel', publicChannel).maybeSingle().then(({ data }) => {
-      if (active && data?.data) setRelayState(data.data as Partial<PublicState>)
+    const refresh = () => void supabase.from('public_event_state').select('data').eq('channel', publicChannel).maybeSingle().then(({ data, error }) => {
+      if (!active) return
+      setPublicConnected(!error)
+      if (data?.data) setRelayState(data.data as Partial<PublicState>)
     })
     refresh()
     const refreshTimer = window.setInterval(refresh, 5000)
     const channel = supabase.channel(`public-event-${publicChannel}`).on('postgres_changes', { event: '*', schema: 'public', table: 'public_event_state', filter: `channel=eq.${publicChannel}` }, (payload) => {
       const row = payload.new as { data?: Partial<PublicState> }
       if (row.data) setRelayState(row.data)
-    }).subscribe()
+    }).subscribe(status => setPublicConnected(status === 'SUBSCRIBED'))
     return () => { active = false; window.clearInterval(refreshTimer); void supabase.removeChannel(channel) }
   }, [publicChannel])
 
@@ -275,7 +278,7 @@ function OperatorApp({ userId }: { userId: string }) {
     URL.revokeObjectURL(url)
   }
 
-  if (publicChannel) return <PublicView state={{ ...state, ...relayState }} />
+  if (publicChannel) return <PublicView state={{ ...state, ...relayState }} connected={publicConnected} />
 
   return (
     <div className={`app-shell ${dark ? 'dark' : ''}`}>
@@ -744,9 +747,8 @@ type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
-function PublicView({ state }: { state: PublicState }) {
+function PublicView({ state, connected }: { state: PublicState; connected: boolean }) {
   const [live, setLive] = useState<PublicState>(state)
-  const connected = true
   const [selectedClub, setSelectedClub] = useState<string>()
   const [buffetOpen, setBuffetOpen] = useState(false)
   const [raffleOpen, setRaffleOpen] = useState(false)

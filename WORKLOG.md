@@ -5,6 +5,7 @@
 | Hora | Cambio |
 |------|--------|
 | 10:01 | feat(auth): recuperación de contraseña por correo y formulario para definir una clave nueva |
+| 10:20 | fix(sync): datos del evento actualizan al editar, conexión QR refleja estado real y snapshot de servidor incluye todos los campos visibles |
 
 ### 2026-08-02
 
