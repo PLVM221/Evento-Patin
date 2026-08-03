@@ -10,6 +10,7 @@
 | 10:50 | style(qr): ficha de club amplía seño y pasadas; título simplificado a Orden de pasadas |
 | 10:57 | style(qr): seño y nombre de coreografía reciben mayor tamaño para lectura a distancia |
 | 11:02 | style(qr): sección y ficha de clubes invitados ampliadas para mejorar legibilidad |
+| 11:12 | feat(soundboard): botón activo se destaca y todos los audios quedan bloqueados hasta finalizar reproducción |
 
 ### 2026-08-02
 

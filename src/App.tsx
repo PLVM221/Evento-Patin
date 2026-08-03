@@ -55,6 +55,8 @@ function OperatorApp({ userId }: { userId: string }) {
     return new URLSearchParams(window.location.search).get('publico') ?? `pista-${createId()}`
   })
   const effectPlayer = useRef<HTMLAudioElement>(null)
+  const playingSoundRef = useRef<string | undefined>(undefined)
+  const [playingSoundId, setPlayingSoundId] = useState<string>()
   const customSoundInput = useRef<HTMLInputElement>(null)
   const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
   const [soundEditorOpen, setSoundEditorOpen] = useState(false)
@@ -202,40 +204,46 @@ function OperatorApp({ userId }: { userId: string }) {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
   }
 
+  const finishSound = useCallback(() => {
+    playingSoundRef.current = undefined
+    setPlayingSoundId(undefined)
+  }, [])
+
   const playEffect = useCallback(
-    (file: string, gain = 1) => {
+    (id: string, file: string, gain = 1, custom = false) => {
       const player = effectPlayer.current
-      if (!player) return
-      player.pause()
-      player.src = `${import.meta.env.BASE_URL}audio/${file}`
+      if (!player || playingSoundRef.current) return
+      playingSoundRef.current = id
+      setPlayingSoundId(id)
+      player.src = custom ? file : `${import.meta.env.BASE_URL}audio/${file}`
       player.currentTime = 0
       player.volume = Math.min(1, (state.effectsVolume / 100) * gain)
-      void player.play()
+      void player.play().catch(finishSound)
     },
-    [state.effectsVolume],
+    [finishSound, state.effectsVolume],
   )
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if (event.key === 'F1') {
         event.preventDefault()
-        playEffect('aplausos.ogg', 0.7)
+        playEffect('applause', 'aplausos.ogg', 0.7)
       }
       if (event.key === 'F2') {
         event.preventDefault()
-        playEffect('aplausos.ogg')
+        playEffect('strong', 'aplausos.ogg')
       }
       if (event.key === 'F3') {
         event.preventDefault()
-        playEffect('locutor/presentacion.wav')
+        playEffect('intro', 'locutor/presentacion.wav')
       }
       if (event.key === 'F4') {
         event.preventDefault()
-        playEffect('locutor/proxima.wav')
+        playEffect('next', 'locutor/proxima.wav')
       }
       if (event.key === 'F6') {
         event.preventDefault()
-        playEffect('locutor/felicitaciones.wav')
+        playEffect('congrats', 'locutor/felicitaciones.wav')
       }
     }
     window.addEventListener('keydown', handleShortcut)
@@ -250,17 +258,9 @@ function OperatorApp({ userId }: { userId: string }) {
     setCustomSounds((current) => [...current, { id: createId(), name, url: URL.createObjectURL(file) }])
   }
 
-  const playCustomSound = (url: string) => {
-    const player = effectPlayer.current
-    if (!player) return
-    player.pause()
-    player.src = url
-    player.currentTime = 0
-    player.volume = state.effectsVolume / 100
-    void player.play()
-  }
+  const playCustomSound = (id: string, url: string) => playEffect(id, url, 1, true)
 
-  const playSoundButton = (button: (typeof soundButtons)[number]) => (button.file.startsWith('blob:') ? playCustomSound(button.file) : playEffect(button.file, button.gain))
+  const playSoundButton = (button: (typeof soundButtons)[number]) => playEffect(button.id, button.file, button.gain, button.file.startsWith('blob:'))
 
   const downloadEventList = () => {
     const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
@@ -550,14 +550,14 @@ function OperatorApp({ userId }: { userId: string }) {
           </div>
           <div className="sound-buttons">
             {soundButtons.map((button) => (
-              <button key={button.id} onClick={() => playSoundButton(button)}>
+              <button className={playingSoundId === button.id ? 'playing' : ''} key={button.id} disabled={Boolean(playingSoundId)} aria-pressed={playingSoundId === button.id} onClick={() => playSoundButton(button)}>
                 <span>{button.icon}</span>
                 <strong>{button.name}</strong>
                 <kbd>{button.shortcut}</kbd>
               </button>
             ))}
             {customSounds.map((sound) => (
-              <button className="custom-sound" key={sound.id} onClick={() => playCustomSound(sound.url)}>
+              <button className={`custom-sound${playingSoundId === sound.id ? ' playing' : ''}`} key={sound.id} disabled={Boolean(playingSoundId)} aria-pressed={playingSoundId === sound.id} onClick={() => playCustomSound(sound.id, sound.url)}>
                 <Volume2 />
                 <strong>{sound.name}</strong>
                 <span
@@ -592,7 +592,7 @@ function OperatorApp({ userId }: { userId: string }) {
         {state.showSkaters && <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />}
         <ParticipatingClubs organizer={state.organizer} clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} showSkaters={state.showSkaters} />
       </main>
-      <audio ref={effectPlayer} preload="auto" />
+      <audio ref={effectPlayer} preload="auto" onEnded={finishSound} onError={finishSound} />
 
       <footer>
         <span>
