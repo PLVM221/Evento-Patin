@@ -815,7 +815,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
       <h1>{live.name}</h1>
       <div className="public-organizer">
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
-        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span></div>
+        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' })}` : ''}</span></div>
       </div>
       {firstStageStarting || nextStageStarting ? (
         <div className="public-starting">
