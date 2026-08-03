@@ -8,6 +8,7 @@
 | 10:20 | fix(sync): datos del evento actualizan al editar, conexión QR refleja estado real y snapshot de servidor incluye todos los campos visibles |
 | 10:42 | feat(qr): cartel de show próximo al finalizar cuenta inicial y recesos, oculto al iniciar cada etapa |
 | 10:50 | style(qr): ficha de club amplía seño y pasadas; título simplificado a Orden de pasadas |
+| 10:57 | style(qr): seño y nombre de coreografía reciben mayor tamaño para lectura a distancia |
 
 ### 2026-08-02
 
