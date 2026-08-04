@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 16:34 | fix(qr): cierre usa capa oscura y mensaje de agradecimiento con contraste legible sobre cualquier marco |
 | 16:28 | feat(audio): audios generales sin club pueden cargarse por etapa, reproducirse en orden y mostrarse correctamente en operador y QR |
 | 14:20 | fix(qr): recarga espera snapshot real antes de renderizar y elimina flash de datos iniciales |
 | 14:42 | feat(audiencia): operador ve presencia QR anónima en vivo con dispositivos, navegadores, sistemas e idiomas |

@@ -925,7 +925,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
   const nextStageStarting = !live.started && live.currentStage < live.stageCount && (live.completedStages ?? []).includes(live.currentStage) && (!live.activeBreakAfter || breakCountdown === '00:00:00')
   const byId = new Map(live.skaters.map((skater) => [skater.id, skater]))
   const frameStyle = live.publicFrame ? { backgroundImage: `linear-gradient(#f3f6fcd9, #f3f6fcd9), url("${live.publicFrame}")` } : undefined
-  if (live.eventClosed) return <main className={`public-closed${live.publicFrame ? ' public-framed' : ''}`} style={frameStyle}><Sparkles /><small>EVENTO FINALIZADO</small><h1>¡Gracias por acompañarnos!</h1><p>{live.closingMessage}</p><div>{live.organizerLogo && <img src={live.organizerLogo} alt={live.organizer} />}<strong>{live.organizer}</strong></div><span>Desarrollado por PLVM Soft</span></main>
+  if (live.eventClosed) return <main className={`public-closed${live.publicFrame ? ' public-framed' : ''}`} style={live.publicFrame ? { backgroundImage: `linear-gradient(#17203ec7, #30286fd9), url("${live.publicFrame}")` } : undefined}><Sparkles /><small>EVENTO FINALIZADO</small><h1>¡Gracias por acompañarnos!</h1><p>{live.closingMessage}</p><div>{live.organizerLogo && <img src={live.organizerLogo} alt={live.organizer} />}<strong>{live.organizer}</strong></div><span>Desarrollado por PLVM Soft</span></main>
   if (selectedClub) {
     const clubSkaters = live.skaters.filter((skater) => skater.club === selectedClub)
     const clubTeachers = (live.teachers ?? []).filter((teacher) => teacher.club === selectedClub)

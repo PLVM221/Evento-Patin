@@ -1,3 +1,5 @@
+.public-closed.public-framed h1,.public-closed.public-framed p,.public-closed.public-framed>small{text-shadow:0 3px 16px #071027cc}.public-closed.public-framed p{margin:6px 0;padding:12px 18px;border-radius:14px;color:#fff;background:#111a3866;font-weight:650;line-height:1.45;opacity:1;backdrop-filter:blur(5px)}
+
 .queue-row.absent {
   color: #c55b66;
   background: #fff2f3;
