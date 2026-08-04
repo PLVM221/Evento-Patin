@@ -50,6 +50,16 @@ type AudiencePresence = {
   connectedAt: string
 }
 
+type PublicControls = {
+  announcement: string
+  announcementTone: 'info' | 'urgent' | 'celebration'
+  highlightNext: boolean
+  eventClosed: boolean
+  closingMessage: string
+}
+
+const defaultPublicControls: PublicControls = { announcement: '', announcementTone: 'info', highlightNext: false, eventClosed: false, closingMessage: 'Gracias por acompañarnos. ¡Nos vemos en el próximo encuentro!' }
+
 function audienceMetadata(sessionId: string): AudiencePresence {
   const ua = navigator.userAgent
   const tablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))
@@ -75,6 +85,9 @@ function OperatorApp({ userId }: { userId: string }) {
     return new URLSearchParams(window.location.search).get('publico') ?? `pista-${createId()}`
   })
   const [audience, setAudience] = useState<AudiencePresence[]>([])
+  const [audienceHistory, setAudienceHistory] = useState({ peak: 0, peakAt: '', total: 0, samples: 0 })
+  const [qrLastPublishedAt, setQrLastPublishedAt] = useState<Date>()
+  const [qrSyncError, setQrSyncError] = useState(false)
   const [audienceSessionId] = useState(() => {
     const key = `pista-audience-${liveChannel}`
     const saved = sessionStorage.getItem(key)
@@ -83,11 +96,19 @@ function OperatorApp({ userId }: { userId: string }) {
     sessionStorage.setItem(key, id)
     return id
   })
+  const [publicControls, setPublicControls] = useState<PublicControls>(() => {
+    try { return { ...defaultPublicControls, ...JSON.parse(localStorage.getItem(`pista-public-controls-${liveChannel}`) ?? '{}') } }
+    catch { return defaultPublicControls }
+  })
+  const [announcementDraft, setAnnouncementDraft] = useState('')
+  const [locutorMode, setLocutorMode] = useState(false)
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const playingSoundRef = useRef<string | undefined>(undefined)
   const fadeFrameRef = useRef<number | undefined>(undefined)
   const [playingSoundId, setPlayingSoundId] = useState<string>()
   const [soundFading, setSoundFading] = useState(false)
+  const [effectProgress, setEffectProgress] = useState({ current: 0, duration: 0 })
+  const [lastSoundId, setLastSoundId] = useState<string>()
   const customSoundInput = useRef<HTMLInputElement>(null)
   const [customSounds, setCustomSounds] = useState<Array<{ id: string; name: string; url: string }>>([])
   const [soundEditorOpen, setSoundEditorOpen] = useState(false)
@@ -205,11 +226,14 @@ function OperatorApp({ userId }: { userId: string }) {
         status,
         stageNumber,
       })),
+      ...publicControls,
     }
     const publicSnapshot = { ...snapshot, buffetItems: state.buffetItems, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, clubLogos: state.clubLogos }
     const publish = () => {
       void supabase.rpc('publish_event_snapshot', { p_channel: liveChannel, p_data: publicSnapshot }).then(({ error }) => {
+        setQrSyncError(Boolean(error))
         if (error) console.error('No se pudo actualizar la web QR:', error.message)
+        else setQrLastPublishedAt(new Date())
       })
     }
     const timer = window.setTimeout(publish, 250)
@@ -218,7 +242,11 @@ function OperatorApp({ userId }: { userId: string }) {
       window.clearTimeout(timer)
       window.clearInterval(heartbeat)
     }
-  }, [state, liveChannel, publicChannel])
+  }, [state, liveChannel, publicChannel, publicControls])
+
+  useEffect(() => {
+    if (!publicChannel) localStorage.setItem(`pista-public-controls-${liveChannel}`, JSON.stringify(publicControls))
+  }, [liveChannel, publicChannel, publicControls])
 
   useEffect(() => {
     if (!publicChannel) return
@@ -259,6 +287,14 @@ function OperatorApp({ userId }: { userId: string }) {
     return () => { void supabase.removeChannel(channel) }
   }, [audienceSessionId, liveChannel, publicChannel])
 
+  useEffect(() => {
+    if (publicChannel) return
+    setAudienceHistory(current => {
+      const peak = Math.max(current.peak, audience.length)
+      return { peak, peakAt: peak > current.peak ? new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : current.peakAt, total: current.total + audience.length, samples: current.samples + 1 }
+    })
+  }, [audience.length, publicChannel])
+
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
   }
@@ -269,6 +305,7 @@ function OperatorApp({ userId }: { userId: string }) {
     playingSoundRef.current = undefined
     setPlayingSoundId(undefined)
     setSoundFading(false)
+    setEffectProgress({ current: 0, duration: 0 })
   }, [])
 
   const fadeOutSound = useCallback(() => {
@@ -292,12 +329,21 @@ function OperatorApp({ userId }: { userId: string }) {
     fadeFrameRef.current = window.requestAnimationFrame(fade)
   }, [finishSound])
 
+  const stopSoundNow = useCallback(() => {
+    const player = effectPlayer.current
+    if (!player || !playingSoundRef.current) return
+    player.pause()
+    player.currentTime = 0
+    finishSound()
+  }, [finishSound])
+
   const playEffect = useCallback(
     (id: string, file: string, gain = 1, custom = false) => {
       const player = effectPlayer.current
       if (!player || playingSoundRef.current) return
       playingSoundRef.current = id
       setPlayingSoundId(id)
+      setLastSoundId(id)
       player.src = custom ? file : `${import.meta.env.BASE_URL}audio/${file}`
       player.currentTime = 0
       player.volume = Math.min(1, (state.effectsVolume / 100) * gain)
@@ -368,12 +414,14 @@ function OperatorApp({ userId }: { userId: string }) {
     desktop: audience.filter(item => item.device === 'desktop').length,
   }
   const summarizeAudience = (key: 'browser' | 'os' | 'language') => Object.entries(audience.reduce<Record<string, number>>((summary, item) => ({ ...summary, [item[key]]: (summary[item[key]] ?? 0) + 1 }), {})).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${name} ${count}`).join(' · ') || 'Sin conexiones'
+  const audienceAverage = audienceHistory.samples ? Math.round((audienceHistory.total / audienceHistory.samples) * 10) / 10 : 0
+  const soundName = (id?: string) => soundButtons.find(item => item.id === id)?.name ?? customSounds.find(item => item.id === id)?.name ?? '—'
 
   if (publicChannel && !publicSnapshotLoaded) return <main className="public-loading"><Sparkles /><strong>Cargando evento…</strong><span>Conectando con la información en vivo.</span></main>
-  if (publicChannel) return <PublicView state={{ ...state, ...relayState }} connected={publicConnected} />
+  if (publicChannel) return <PublicView state={{ ...state, ...defaultPublicControls, ...relayState }} connected={publicConnected} />
 
   return (
-    <div className={`app-shell ${dark ? 'dark' : ''}`}>
+    <div className={`app-shell${dark ? ' dark' : ''}${locutorMode ? ' locutor-mode' : ''}`}>
       <header>
         <div className="brand">
           <div className="brand-mark">
@@ -405,6 +453,7 @@ function OperatorApp({ userId }: { userId: string }) {
           <button title="QR para espectadores" aria-label="QR para espectadores" onClick={() => setQrOpen(true)}>
             <QrCode />
           </button>
+          <button className="locutor-toggle" title="Modo locutor simplificado" aria-label="Modo locutor" onClick={() => setLocutorMode(value => !value)}><Mic2 /></button>
           <button className="logout-header" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void supabase.auth.signOut()}>SALIR</button>
           <button className="reset-header" title="Reiniciar festival" onClick={() => window.confirm('¿Reiniciar todo el festival? Las finalizadas volverán a pendiente.') && reset()}>
             <RefreshCcw />
@@ -481,10 +530,16 @@ function OperatorApp({ userId }: { userId: string }) {
           </div>}
         </section>
         <section className="audience-panel">
-          <div className="audience-total"><Radio /><span><small>AUDIENCIA QR EN VIVO</small><strong>{audience.length}</strong><em>{audience.length === 1 ? 'pantalla conectada' : 'pantallas conectadas'}</em></span></div>
+          <div className="audience-total"><Radio /><span><small>AUDIENCIA QR EN VIVO</small><strong>{audience.length}</strong><em>{audience.length === 1 ? 'pantalla conectada' : 'pantallas conectadas'} · pico {audienceHistory.peak} {audienceHistory.peakAt && `a las ${audienceHistory.peakAt}`} · promedio {audienceAverage}</em></span></div>
           <div className="audience-devices"><span><Smartphone /><b>{audienceDevices.mobile}</b><small>Móviles</small></span><span><Tablet /><b>{audienceDevices.tablet}</b><small>Tablets</small></span><span><Laptop /><b>{audienceDevices.desktop}</b><small>Computadoras</small></span></div>
           <div className="audience-details"><span><small>NAVEGADORES</small><strong>{summarizeAudience('browser')}</strong></span><span><small>SISTEMAS</small><strong>{summarizeAudience('os')}</strong></span><span><small>IDIOMAS</small><strong>{summarizeAudience('language')}</strong></span></div>
           <small className="audience-note">Conteo anónimo por pestaña activa · sin ubicación ni permisos</small>
+        </section>
+        <section className="live-tools">
+          <div className="live-tools-title"><Radio /><span><small>CONTROL DE PANTALLA QR</small><strong>Avisos en vivo</strong><em className={qrSyncError ? 'error' : ''}>{qrSyncError ? 'Error de sincronización' : qrLastPublishedAt ? `Sincronizado ${qrLastPublishedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}` : 'Conectando…'}</em></span></div>
+          <div className="announcement-compose"><input value={announcementDraft} maxLength={120} placeholder="Escribí un aviso para espectadores…" onChange={event => setAnnouncementDraft(event.target.value)} /><select value={publicControls.announcementTone} onChange={event => setPublicControls(current => ({ ...current, announcementTone: event.target.value as PublicControls['announcementTone'] }))}><option value="info">Información</option><option value="urgent">Urgente</option><option value="celebration">Celebración</option></select><button disabled={!announcementDraft.trim()} onClick={() => { setPublicControls(current => ({ ...current, announcement: announcementDraft.trim() })); setAnnouncementDraft('') }}>MOSTRAR</button></div>
+          <div className="live-tool-actions"><button className={publicControls.highlightNext ? 'active' : ''} onClick={() => setPublicControls(current => ({ ...current, highlightNext: !current.highlightNext }))}>Preparar próximo club</button><button disabled={!publicControls.announcement} onClick={() => setPublicControls(current => ({ ...current, announcement: '' }))}>Quitar aviso</button><button onClick={downloadEventList}>Descargar resumen</button><button className={publicControls.eventClosed ? 'active close-event' : 'close-event'} onClick={() => publicControls.eventClosed ? setPublicControls(current => ({ ...current, eventClosed: false })) : window.confirm('¿Cerrar el evento y mostrar la pantalla de agradecimiento en el QR?') && setPublicControls(current => ({ ...current, eventClosed: true }))}>{publicControls.eventClosed ? 'REABRIR EVENTO' : 'CERRAR EVENTO'}</button></div>
+          {publicControls.eventClosed && <input className="closing-message-input" value={publicControls.closingMessage} maxLength={160} onChange={event => setPublicControls(current => ({ ...current, closingMessage: event.target.value }))} />}
         </section>
 
         <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
@@ -639,6 +694,7 @@ function OperatorApp({ userId }: { userId: string }) {
             </span>
             <div className="sound-controls">
               <button className={`fade-sound${soundFading ? ' active' : ''}`} disabled={!playingSoundId || soundFading} onClick={fadeOutSound}><VolumeX />{soundFading ? 'DISMINUYENDO…' : 'DISMINUIR · 3 SEG'}</button>
+              <button className="stop-sound" disabled={!playingSoundId} onClick={stopSoundNow}>DETENER</button>
               <label>
                 <Volume2 />
                 <input type="range" min="0" max="100" value={state.effectsVolume} onChange={(event) => setVolume('effectsVolume', Number(event.target.value))} />
@@ -685,12 +741,13 @@ function OperatorApp({ userId }: { userId: string }) {
               }}
             />
           </div>
+          <div className="sound-playback-status"><span><small>{playingSoundId ? 'REPRODUCIENDO' : 'ÚLTIMO AUDIO'}</small><strong>{soundName(playingSoundId ?? lastSoundId)}</strong></span>{playingSoundId && <><div><i style={{ width: `${effectProgress.duration ? Math.min(100, effectProgress.current / effectProgress.duration * 100) : 0}%` }} /></div><b>{formatTime(effectProgress.current)} / {formatTime(effectProgress.duration)}</b></>}</div>
         </section>
 
         {state.showSkaters && <Queue skaters={visible} activeId={state.activeId} onMove={move} onSelect={setSelected} onStatus={setStatus} onDownload={downloadEventList} />}
         <ParticipatingClubs organizer={state.organizer} clubs={state.clubs} clubLogos={state.clubLogos} teachers={state.teachers} skaters={state.skaters} showSkaters={state.showSkaters} />
       </main>
-      <audio ref={effectPlayer} preload="auto" onEnded={finishSound} onError={finishSound} />
+      <audio ref={effectPlayer} preload="auto" onLoadedMetadata={event => setEffectProgress({ current: 0, duration: Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0 })} onTimeUpdate={event => setEffectProgress({ current: event.currentTarget.currentTime, duration: Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0 })} onEnded={finishSound} onError={finishSound} />
 
       <footer>
         <span>
@@ -842,7 +899,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
   )
 }
 
-type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'completedStages' | 'started' | 'actualStartedAt' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & {
+type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'completedStages' | 'started' | 'actualStartedAt' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & PublicControls & {
   skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
@@ -861,6 +918,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
   const nextStageStarting = !live.started && live.currentStage < live.stageCount && (live.completedStages ?? []).includes(live.currentStage) && (!live.activeBreakAfter || breakCountdown === '00:00:00')
   const byId = new Map(live.skaters.map((skater) => [skater.id, skater]))
   const frameStyle = live.publicFrame ? { backgroundImage: `linear-gradient(#f3f6fcd9, #f3f6fcd9), url("${live.publicFrame}")` } : undefined
+  if (live.eventClosed) return <main className={`public-closed${live.publicFrame ? ' public-framed' : ''}`} style={frameStyle}><Sparkles /><small>EVENTO FINALIZADO</small><h1>¡Gracias por acompañarnos!</h1><p>{live.closingMessage}</p><div>{live.organizerLogo && <img src={live.organizerLogo} alt={live.organizer} />}<strong>{live.organizer}</strong></div><span>Desarrollado por PLVM Soft</span></main>
   if (selectedClub) {
     const clubSkaters = live.skaters.filter((skater) => skater.club === selectedClub)
     const clubTeachers = (live.teachers ?? []).filter((teacher) => teacher.club === selectedClub)
@@ -874,6 +932,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
       <div className="public-brand">
         <Sparkles /> PISTA EN VIVO <i className={connected ? 'online' : ''}>{connected ? 'Actualizando' : 'Conectando'}</i>
       </div>
+      {live.announcement && <div className={`public-announcement ${live.announcementTone}`}><Radio /><span><small>AVISO DEL EVENTO</small><strong>{live.announcement}</strong></span></div>}
       {live.showBuffet && <button className="public-buffet-button" onClick={() => setBuffetOpen(true)}><ShoppingBasket /> Ver precios del bufet</button>}
       {live.showRaffle && <button className="public-raffle-button" onClick={() => setRaffleOpen(true)}><Trophy /> Ver sorteo</button>}
       <h1>{live.name}</h1>
@@ -936,10 +995,10 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
             {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>
           <div className="public-columns">
-            <div className="public-next">
+            <div className={`public-next${live.highlightNext ? ' highlighted' : ''}`}>
               {pending[0] && <div className="public-next-logo">{(live.clubLogos?.[pending[0].club] || (pending[0].club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[pending[0].club] || live.organizerLogo} alt={`Escudo de ${pending[0].club}`} /> : pending[0].club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>}
               <div>
-                <small>A CONTINUACIÓN</small>
+                <small>{live.highlightNext ? 'PREPARARSE · A CONTINUACIÓN' : 'A CONTINUACIÓN'}</small>
                 <h3>{pending[0] ? (live.showSkaters ? fullName(pending[0] as Skater) : pending[0].club) : '—'}</h3>
                 <p>{live.showSkaters ? pending[0]?.club : pending[0]?.track}</p>
               </div>

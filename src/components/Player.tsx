@@ -23,7 +23,7 @@ export function Player({ skater, elapsed, volume, onVolume, disabled = false }: 
 
   useEffect(() => {
     if (!playing || !skater || skater.audioUrl) return
-    const timer = window.setInterval(() => setPosition(value => Math.min(skater.duration, value + 1)), 1000)
+    const timer = window.setInterval(() => setPosition(value => value + 1), 1000)
     return () => window.clearInterval(timer)
   }, [playing, skater])
 
@@ -62,12 +62,15 @@ export function Player({ skater, elapsed, volume, onVolume, disabled = false }: 
   }
 
   const duration = skater?.duration ?? 0
+  const timingProgress = duration ? Math.min(100, position / duration * 100) : 0
+  const overtime = Math.max(0, position - duration)
 
   return (
     <div className="player">
+      <div className={`player-timing${overtime ? ' overtime' : ''}`}><span><small>{overtime ? 'TIEMPO CUMPLIDO' : 'TIEMPO DE COREOGRAFÍA'}</small><strong>{overtime ? `+${formatTime(overtime)}` : `${Math.round(timingProgress)}%`}</strong></span><div><i style={{ width: `${timingProgress}%` }} /></div></div>
       <div className="timeline">
         <span>{formatTime(position)}</span>
-        <input disabled={disabled} aria-label="Progreso" type="range" min="0" max={duration} value={position} onChange={event => seek(Number(event.target.value))} />
+        <input disabled={disabled} aria-label="Progreso" type="range" min="0" max={Math.max(duration, position)} value={position} onChange={event => seek(Number(event.target.value))} />
         <span className="remaining">-{formatTime(duration - position)}</span>
       </div>
       <div className="player-controls">

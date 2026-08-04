@@ -8,6 +8,9 @@
 | 14:42 | feat(audiencia): operador ve presencia QR anónima en vivo con dispositivos, navegadores, sistemas e idiomas |
 | 14:50 | style(audiencia): tarjeta QR ubicada entre datos del evento y cuenta regresiva |
 | 15:05 | style(operador): control de audios integrado a métricas; restantes y etapa reciben jerarquía visual |
+| 15:42 | feat(qr): avisos en vivo, próximo club destacado, cierre del evento y modo locutor simplificado |
+| 15:55 | feat(operador): salud QR, historial de audiencia, progreso de efectos y cronómetro con exceso visible |
+| 16:02 | feat(seguridad): cierre QR confirmado, resumen descargable y parada inmediata de efectos |
 
 ### 2026-08-03
 
