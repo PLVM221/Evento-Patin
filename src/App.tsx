@@ -414,7 +414,7 @@ function OperatorApp({ userId }: { userId: string }) {
       </header>
 
       <main>
-        <section className="stats">
+        <section className={`stats${state.showSkaters ? '' : ' no-skaters'}`}>
           {state.showSkaters && <div>
             <Users />
             <span>
@@ -429,7 +429,7 @@ function OperatorApp({ userId }: { userId: string }) {
               <strong>{finished}</strong>
             </span>
           </div>}
-          {state.showSkaters && <div>
+          {state.showSkaters && <div className="remaining-stat">
             <Clock3 />
             <span>
               <small>RESTANTES</small>
@@ -438,11 +438,10 @@ function OperatorApp({ userId }: { userId: string }) {
           </div>}
           <div className="stage-stat">
             <span>
-              <small>ETAPA ACTUAL</small>
-              <strong>
-                {state.currentStage} / {state.stageCount}
-              </strong>
+              <small>ETAPA EN CURSO</small>
+              <strong><b>{state.currentStage}</b><em>DE {state.stageCount}</em></strong>
             </span>
+            <i className="stage-progress">{Array.from({ length: state.stageCount }, (_, index) => <b className={index + 1 <= state.currentStage ? 'active' : ''} key={index} />)}</i>
           </div>
           <div className="estimate">
             <span>
@@ -451,6 +450,7 @@ function OperatorApp({ userId }: { userId: string }) {
             </span>
             <em>45 s entre pasadas</em>
           </div>
+          <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>
           {state.showSkaters && <div className="search-wrap">
             <label className="search">
               <Search />
@@ -487,7 +487,6 @@ function OperatorApp({ userId }: { userId: string }) {
           <small className="audience-note">Conteo anónimo por pestaña activa · sin ubicación ni permisos</small>
         </section>
 
-        <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>
         <WeatherCard location={state.location} date={state.eventDate} time={state.startTime} countdownMinutes={state.countdownMinutes} />
         {!state.actualStartedAt && state.completedStages.length === 0 && (
           <div className="operator-countdown">

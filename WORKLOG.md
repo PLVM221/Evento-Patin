@@ -7,6 +7,7 @@
 | 14:20 | fix(qr): recarga espera snapshot real antes de renderizar y elimina flash de datos iniciales |
 | 14:42 | feat(audiencia): operador ve presencia QR anónima en vivo con dispositivos, navegadores, sistemas e idiomas |
 | 14:50 | style(audiencia): tarjeta QR ubicada entre datos del evento y cuenta regresiva |
+| 15:05 | style(operador): control de audios integrado a métricas; restantes y etapa reciben jerarquía visual |
 
 ### 2026-08-03
 
