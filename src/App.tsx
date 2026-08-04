@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock3, Maximize2, Mic2, Moon, QrCode, RefreshCcw, Search, Settings, ShoppingBasket, Sparkles, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Clock3, Laptop, Maximize2, Mic2, Moon, QrCode, Radio, RefreshCcw, Search, Settings, ShoppingBasket, Smartphone, Sparkles, Tablet, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
 import QRCode from 'qrcode'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
@@ -40,6 +40,25 @@ function useRemainingUntil(target?: string) {
   return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}:${String(totalSeconds % 60).padStart(2, '0')}`
 }
 
+type AudiencePresence = {
+  sessionId: string
+  role: 'viewer'
+  device: 'mobile' | 'tablet' | 'desktop'
+  browser: string
+  os: string
+  language: string
+  connectedAt: string
+}
+
+function audienceMetadata(sessionId: string): AudiencePresence {
+  const ua = navigator.userAgent
+  const tablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))
+  const mobile = /Mobi|Android|iPhone|iPod/i.test(ua)
+  const browser = /Edg/i.test(ua) ? 'Edge' : /SamsungBrowser/i.test(ua) ? 'Samsung Internet' : /CriOS|Chrome/i.test(ua) ? 'Chrome' : /FxiOS|Firefox/i.test(ua) ? 'Firefox' : /Safari/i.test(ua) ? 'Safari' : 'Otro'
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : 'Otro'
+  return { sessionId, role: 'viewer', device: tablet ? 'tablet' : mobile ? 'mobile' : 'desktop', browser, os, language: navigator.language || 'Sin dato', connectedAt: new Date().toISOString() }
+}
+
 function OperatorApp({ userId }: { userId: string }) {
   const { state, databaseStatus, saveNow, resolveConflict, offlineEnabled, setOfflineMode, savedEvents, saveEvent, restoreEvent, deleteSavedEvent, start, finishAndNext, move, moveToPosition, setStatus, setVolume, reset, completeStage, startNextStage, startBreak, finishBreak, updateEvent, addSkater, importSkaters, importEvent, updateSkater, removeSkater, renameClub, addClub, removeClub, updateClubLogo, addTeacher, removeTeacher, addBuffetItem, updateBuffetItem, removeBuffetItem, setPublicSectionVisibility, setRaffleTicketPrice, addRafflePrice, removeRafflePrice, addRafflePrize, updateRafflePrize, removeRafflePrize, clearFestival, undo, canUndo } = useFestival(userId)
   const [query, setQuery] = useState('')
@@ -54,6 +73,15 @@ function OperatorApp({ userId }: { userId: string }) {
   const [liveChannel] = useState(() => {
     if (userId !== 'public') return `pista-${userId}`
     return new URLSearchParams(window.location.search).get('publico') ?? `pista-${createId()}`
+  })
+  const [audience, setAudience] = useState<AudiencePresence[]>([])
+  const [audienceSessionId] = useState(() => {
+    const key = `pista-audience-${liveChannel}`
+    const saved = sessionStorage.getItem(key)
+    if (saved) return saved
+    const id = createId()
+    sessionStorage.setItem(key, id)
+    return id
   })
   const effectPlayer = useRef<HTMLAudioElement>(null)
   const playingSoundRef = useRef<string | undefined>(undefined)
@@ -215,6 +243,22 @@ function OperatorApp({ userId }: { userId: string }) {
     return () => { active = false; window.clearInterval(refreshTimer); void supabase.removeChannel(channel) }
   }, [publicChannel])
 
+  useEffect(() => {
+    const channel = supabase.channel(`audience-${liveChannel}`, publicChannel ? { config: { presence: { key: audienceSessionId } } } : undefined)
+    const syncAudience = () => {
+      const presence = channel.presenceState() as Record<string, Array<AudiencePresence & { presence_ref?: string }>>
+      const unique = new Map<string, AudiencePresence>()
+      Object.values(presence).flat().forEach(member => {
+        if (member.role === 'viewer' && member.sessionId) unique.set(member.sessionId, member)
+      })
+      setAudience([...unique.values()])
+    }
+    channel.on('presence', { event: 'sync' }, syncAudience).subscribe(status => {
+      if (status === 'SUBSCRIBED' && publicChannel) void channel.track(audienceMetadata(audienceSessionId))
+    })
+    return () => { void supabase.removeChannel(channel) }
+  }, [audienceSessionId, liveChannel, publicChannel])
+
   const finalize = () => {
     if (active && window.confirm(`¿Finalizar participación de ${fullName(active)}?`)) finishAndNext()
   }
@@ -317,6 +361,13 @@ function OperatorApp({ userId }: { userId: string }) {
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  const audienceDevices = {
+    mobile: audience.filter(item => item.device === 'mobile').length,
+    tablet: audience.filter(item => item.device === 'tablet').length,
+    desktop: audience.filter(item => item.device === 'desktop').length,
+  }
+  const summarizeAudience = (key: 'browser' | 'os' | 'language') => Object.entries(audience.reduce<Record<string, number>>((summary, item) => ({ ...summary, [item[key]]: (summary[item[key]] ?? 0) + 1 }), {})).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${name} ${count}`).join(' · ') || 'Sin conexiones'
 
   if (publicChannel && !publicSnapshotLoaded) return <main className="public-loading"><Sparkles /><strong>Cargando evento…</strong><span>Conectando con la información en vivo.</span></main>
   if (publicChannel) return <PublicView state={{ ...state, ...relayState }} connected={publicConnected} />
@@ -428,6 +479,12 @@ function OperatorApp({ userId }: { userId: string }) {
             )}
             {query.trim() && suggestions.length === 0 && <div className="search-results empty-search">Sin coincidencias</div>}
           </div>}
+        </section>
+        <section className="audience-panel">
+          <div className="audience-total"><Radio /><span><small>AUDIENCIA QR EN VIVO</small><strong>{audience.length}</strong><em>{audience.length === 1 ? 'pantalla conectada' : 'pantallas conectadas'}</em></span></div>
+          <div className="audience-devices"><span><Smartphone /><b>{audienceDevices.mobile}</b><small>Móviles</small></span><span><Tablet /><b>{audienceDevices.tablet}</b><small>Tablets</small></span><span><Laptop /><b>{audienceDevices.desktop}</b><small>Computadoras</small></span></div>
+          <div className="audience-details"><span><small>NAVEGADORES</small><strong>{summarizeAudience('browser')}</strong></span><span><small>SISTEMAS</small><strong>{summarizeAudience('os')}</strong></span><span><small>IDIOMAS</small><strong>{summarizeAudience('language')}</strong></span></div>
+          <small className="audience-note">Conteo anónimo por pestaña activa · sin ubicación ni permisos</small>
         </section>
 
         <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>

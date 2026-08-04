@@ -5,6 +5,7 @@
 | Hora | Cambio |
 |------|--------|
 | 14:20 | fix(qr): recarga espera snapshot real antes de renderizar y elimina flash de datos iniciales |
+| 14:42 | feat(audiencia): operador ve presencia QR anónima en vivo con dispositivos, navegadores, sistemas e idiomas |
 
 ### 2026-08-03
 
