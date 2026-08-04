@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 17:02 | feat(orden): administración permite mover patinadoras, pasadas y audios generales entre posiciones y etapas con sincronización QR |
 | 16:45 | copy(ui): etiquetas visibles “Seño/Seños” reemplazadas por “Profe/Profes” en todo el sistema |
 | 16:39 | copy(qr): cierre elimina agradecimiento repetido y deja “Nos vemos en el próximo evento” |
 | 16:34 | fix(qr): cierre usa capa oscura y mensaje de agradecimiento con contraste legible sobre cualquier marco |

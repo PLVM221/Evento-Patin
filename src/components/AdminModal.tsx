@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Headphones, Music2, Plus, Save, Settings2, ShoppingBasket, Trash2, Trophy, Users, X } from 'lucide-react'
 import type { FestivalState, SavedEvent, Skater } from '../models'
-import { fullName } from '../models'
+import { fullName, isEntryEnabled } from '../models'
 import { removeTrack, saveTrack } from '../lib/audioStore'
 import { validateCsvRow } from '../lib/festivalValidation'
 
@@ -49,6 +49,7 @@ interface Props {
   onImportSkaters: (skaters: Array<Omit<Skater, 'id' | 'status'>>) => void
   onImportEvent: (value: unknown) => void
   onUpdateSkater: (id: string, values: Partial<Skater>) => void
+  onMoveSkater: (id: string, stage: Skater['stageNumber'], position: number) => void
   onRemoveSkater: (id: string) => void
   onRenameClub: (from: string, to: string) => void
   onAddClub: (name: string) => void
@@ -76,7 +77,7 @@ interface Props {
   onClearAll: () => void
 }
 
-export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onRemoveSkater, onRenameClub, onAddClub, onRemoveClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onSaveChanges, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
+export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImportSkaters, onImportEvent, onUpdateSkater, onMoveSkater, onRemoveSkater, onRenameClub, onAddClub, onRemoveClub, onUpdateClubLogo, onAddTeacher, onRemoveTeacher, onAddBuffetItem, onUpdateBuffetItem, onRemoveBuffetItem, onSetPublicSectionVisibility, onAddRafflePrice, onRemoveRafflePrice, onAddRafflePrize, onUpdateRafflePrize, onRemoveRafflePrize, savedEvents, onSaveEvent, onSaveChanges, onRestoreEvent, onDeleteSavedEvent, offlineEnabled, onSetOfflineMode, onClearAll }: Props) {
   const [tab, setTab] = useState<Tab>('evento')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'offline' | 'error'>('idle')
   const clubs = useMemo(() => [...state.clubs].sort(), [state.clubs])
@@ -105,6 +106,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {state.showSkaters && tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
+          {tab === 'pasadas' && <OrderAdmin state={state} onMove={onMoveSkater} />}
           {tab === 'pasadas' && <GeneralAudioAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'pasadas' && <PassAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
@@ -199,6 +201,19 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
     <label className="file-btn">Importar CSV<input type="file" accept=".csv,text/csv" onChange={event => void importCsv(event.target.files?.[0])} /></label><small className="field-help">Columnas: número; nombre; apellido; club; categoría; etapa; canción; duración; tanda.</small>
     <div className="admin-list">{state.skaters.map(skater => <div className={`admin-skater ${skater.status === 'ABSENT' ? 'not-participating' : ''}`} key={skater.id}><label className="participation-check"><input type="checkbox" checked={skater.status !== 'ABSENT'} disabled={skater.status === 'FINISHED' || skater.status === 'SKATING'} onChange={event => onUpdate(skater.id, { status: event.target.checked ? 'PENDING' : 'ABSENT' })} /><span>Participa</span></label><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
   </div>
+}
+
+function orderedStageEntries(state: FestivalState, stage: Skater['stageNumber']) {
+  const stageEntries = state.skaters.filter(entry => entry.stageNumber === stage && isEntryEnabled(entry, state.showSkaters))
+  const byId = new Map(stageEntries.map(entry => [entry.id, entry]))
+  const ordered = (state.stageOrders[stage] ?? []).map(id => byId.get(id)).filter((entry): entry is Skater => Boolean(entry))
+  const orderedIds = new Set(ordered.map(entry => entry.id))
+  return [...ordered, ...stageEntries.filter(entry => !orderedIds.has(entry.id))]
+}
+
+function OrderAdmin({ state, onMove }: { state: FestivalState; onMove: Props['onMoveSkater'] }) {
+  const stages = Array.from({ length: state.stageCount }, (_, index) => (index + 1) as Skater['stageNumber'])
+  return <div className="order-admin"><div className="admin-intro"><h3>Reacomodar orden</h3><p>Cambiá posición o etapa. Las demás pasadas se acomodan automáticamente y el QR se actualiza en vivo.</p></div>{stages.map(stage => { const entries = orderedStageEntries(state, stage); return <section className="order-stage" key={stage}><h4>Etapa {stage} <span>{entries.length} pasadas</span></h4>{entries.map((entry, index) => <div className="order-entry" key={entry.id}><strong>{index + 1}</strong><div><b>{entry.entryType === 'general' ? entry.track : state.showSkaters ? fullName(entry) : entry.club}</b><small>{entry.entryType === 'general' ? 'Audio general' : state.showSkaters ? entry.club : entry.track}</small></div><label><span>Posición</span><select value={index + 1} onChange={event => onMove(entry.id, stage, Number(event.target.value))}>{entries.map((_, position) => <option key={position + 1} value={position + 1}>{position + 1}</option>)}</select></label><label><span>Etapa</span><select value={stage} onChange={event => { const targetStage = Number(event.target.value) as Skater['stageNumber']; onMove(entry.id, targetStage, orderedStageEntries(state, targetStage).length + 1) }}>{stages.map(value => <option key={value} value={value}>Etapa {value}</option>)}</select></label></div>)}</section>})}</div>
 }
 
 function GeneralAudioAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
