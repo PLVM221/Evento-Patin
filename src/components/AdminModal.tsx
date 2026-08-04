@@ -106,9 +106,9 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {state.showSkaters && tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
-          {tab === 'pasadas' && <OrderAdmin state={state} onMove={onMoveSkater} />}
           {tab === 'pasadas' && <GeneralAudioAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'pasadas' && <PassAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
+          {tab === 'pasadas' && <OrderAdmin state={state} onMove={onMoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin state={state} clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onRemove={onRemoveClub} onLogo={onUpdateClubLogo} />}
           {tab === 'bufet' && <BuffetAdmin state={state} onAdd={onAddBuffetItem} onUpdate={onUpdateBuffetItem} onRemove={onRemoveBuffetItem} />}
