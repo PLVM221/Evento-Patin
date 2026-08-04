@@ -50,6 +50,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const [qrImage, setQrImage] = useState('')
   const [relayState, setRelayState] = useState<Partial<PublicState>>({})
   const [publicConnected, setPublicConnected] = useState(false)
+  const [publicSnapshotLoaded, setPublicSnapshotLoaded] = useState(false)
   const [liveChannel] = useState(() => {
     if (userId !== 'public') return `pista-${userId}`
     return new URLSearchParams(window.location.search).get('publico') ?? `pista-${createId()}`
@@ -197,13 +198,19 @@ function OperatorApp({ userId }: { userId: string }) {
     const refresh = () => void supabase.from('public_event_state').select('data').eq('channel', publicChannel).maybeSingle().then(({ data, error }) => {
       if (!active) return
       setPublicConnected(!error)
-      if (data?.data) setRelayState(data.data as Partial<PublicState>)
+      if (data?.data) {
+        setRelayState(data.data as Partial<PublicState>)
+        setPublicSnapshotLoaded(true)
+      }
     })
     refresh()
     const refreshTimer = window.setInterval(refresh, 5000)
     const channel = supabase.channel(`public-event-${publicChannel}`).on('postgres_changes', { event: '*', schema: 'public', table: 'public_event_state', filter: `channel=eq.${publicChannel}` }, (payload) => {
       const row = payload.new as { data?: Partial<PublicState> }
-      if (row.data) setRelayState(row.data)
+      if (row.data) {
+        setRelayState(row.data)
+        setPublicSnapshotLoaded(true)
+      }
     }).subscribe(status => setPublicConnected(status === 'SUBSCRIBED'))
     return () => { active = false; window.clearInterval(refreshTimer); void supabase.removeChannel(channel) }
   }, [publicChannel])
@@ -311,6 +318,7 @@ function OperatorApp({ userId }: { userId: string }) {
     URL.revokeObjectURL(url)
   }
 
+  if (publicChannel && !publicSnapshotLoaded) return <main className="public-loading"><Sparkles /><strong>Cargando evento…</strong><span>Conectando con la información en vivo.</span></main>
   if (publicChannel) return <PublicView state={{ ...state, ...relayState }} connected={publicConnected} />
 
   return (

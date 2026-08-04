@@ -1,5 +1,11 @@
 # WORKLOG
 
+### 2026-08-04
+
+| Hora | Cambio |
+|------|--------|
+| 14:20 | fix(qr): recarga espera snapshot real antes de renderizar y elimina flash de datos iniciales |
+
 ### 2026-08-03
 
 | Hora | Cambio |
