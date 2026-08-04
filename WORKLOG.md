@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 17:24 | style(tema): modo noche real reemplaza filtro invertido, conserva colores e imágenes y suma switch persistente tipo red social |
 | 17:08 | style(pasadas): bloque para reacomodar orden movido debajo de todas las cargas existentes |
 | 17:02 | feat(orden): administración permite mover patinadoras, pasadas y audios generales entre posiciones y etapas con sincronización QR |
 | 16:45 | copy(ui): etiquetas visibles “Seño/Seños” reemplazadas por “Profe/Profes” en todo el sistema |

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock3, Laptop, Maximize2, Mic2, Moon, QrCode, Radio, RefreshCcw, Search, Settings, ShoppingBasket, Smartphone, Sparkles, Tablet, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Clock3, Laptop, Maximize2, Mic2, Moon, QrCode, Radio, RefreshCcw, Search, Settings, ShoppingBasket, Smartphone, Sparkles, Sun, Tablet, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
 import QRCode from 'qrcode'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
@@ -80,7 +80,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(() => localStorage.getItem('pista-theme') === 'dark')
   const [qrOpen, setQrOpen] = useState(false)
   const [qrImage, setQrImage] = useState('')
   const [relayState, setRelayState] = useState<Partial<PublicState>>({})
@@ -183,6 +183,10 @@ function OperatorApp({ userId }: { userId: string }) {
   useEffect(() => {
     void QRCode.toDataURL(publicUrl, { width: 280, margin: 1 }).then(setQrImage)
   }, [publicUrl])
+
+  useEffect(() => {
+    localStorage.setItem('pista-theme', dark ? 'dark' : 'light')
+  }, [dark])
 
   useEffect(() => {
     if (!state.started) return
@@ -454,8 +458,8 @@ function OperatorApp({ userId }: { userId: string }) {
           <button title="Pantalla completa" aria-label="Pantalla completa" onClick={() => void document.documentElement.requestFullscreen()}>
             <Maximize2 />
           </button>
-          <button title="Cambiar tema claro/oscuro" aria-label="Cambiar tema" onClick={() => setDark((value) => !value)}>
-            <Moon />
+          <button className={`theme-toggle${dark ? ' active' : ''}`} title={dark ? 'Usar modo claro' : 'Usar modo noche'} aria-label={dark ? 'Usar modo claro' : 'Usar modo noche'} aria-pressed={dark} onClick={() => setDark((value) => !value)}>
+            <Moon className="theme-moon" /><Sun className="theme-sun" /><i />
           </button>
           <button title="Administrar evento, patinadoras, clubes y audios" aria-label="Administrar" onClick={() => setAdminOpen(true)}>
             <Settings />

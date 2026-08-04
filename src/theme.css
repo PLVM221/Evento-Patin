@@ -1,0 +1,55 @@
+.header-actions .theme-toggle {
+  position: relative;
+  width: 58px;
+  padding: 0 5px;
+  justify-content: space-between;
+  overflow: hidden;
+  border: 1px solid #dfe4ed;
+  background: #eef1f6;
+  transition: 0.25s;
+}
+
+.theme-toggle > svg { position: relative; z-index: 2; width: 13px !important; height: 13px; }
+.theme-toggle .theme-moon { color: #fff; }
+.theme-toggle .theme-sun { color: #9b7417; }
+.theme-toggle > i { position: absolute; left: 4px; width: 26px; height: 26px; border-radius: 8px; background: #675bd8; box-shadow: 0 3px 8px #20284c45; transition: transform 0.25s; }
+.header-actions .theme-toggle.active { border-color: #38415a; background: #20283a; }
+.theme-toggle.active > i { transform: translateX(22px); background: #f4b942; }
+.theme-toggle.active .theme-moon { color: #929bb0; }
+.theme-toggle.active .theme-sun { color: #44330d; }
+
+.app-shell.dark {
+  --navy: #f0f3fb;
+  --ink: #e9edf7;
+  --muted: #99a3b8;
+  --line: #30394d;
+  min-height: 100vh;
+  color: #e9edf7;
+  background: #101521;
+  filter: none !important;
+  color-scheme: dark;
+}
+
+.dark img, .dark audio, .dark .avatar, .dark .brand-mark { filter: none !important; }
+.dark header, .dark footer { color: #e9edf7; background: #171d2a; border-color: #30394d; }
+.dark .header-actions button:not(.theme-toggle) { color: #aeb7ca; background: #242c3d; }
+.dark .card, .dark .search, .dark .sound-buttons button, .dark .audience-panel, .dark .live-tools, .dark .participating-clubs, .dark .order-stage, .dark .admin-list, .dark .audio-list, .dark .club-list, .dark .teacher-list > div, .dark .saved-events, .dark .backup-current { color: #e9edf7; background: #171d2a; border-color: #30394d; box-shadow: 0 8px 24px #0003; }
+.dark .now-card h1, .dark .person, .dark .section-title span, .dark .aside-title > span, .dark .next-person h2, .dark .waiting-row strong, .dark .track strong { color: #f0f3fb; }
+.dark .player, .dark .waiting-title, .dark .queue-head, .dark .sound-playback-status, .dark .modal-track, .dark .stage-controls, .dark .order-admin { color: #dfe5f2; background: #1d2534; border-color: #343e52; }
+.dark .waiting-row, .dark .track, .dark .aside-title, .dark .queue-row, .dark .admin-skater, .dark .audio-list > div, .dark .club-list > div { border-color: #2b3447; }
+.dark .queue-row.active { background: #292545; }
+.dark .queue-row:hover, .dark .row-actions button:hover { background: #222a3a; }
+.dark input, .dark select, .dark textarea, .dark .search input, .dark .admin-form input, .dark .admin-form select { color: #edf1fa; background: #111722; border-color: #39445b; }
+.dark input::placeholder, .dark textarea::placeholder { color: #778298; }
+.dark .icon-btn, .dark kbd, .dark .next, .dark .waiting-row > span { color: #b6bfd1; background: #252d3d; border-color: #3a4457; }
+.dark .sound-buttons button:first-child, .dark .sound-buttons button:nth-child(2) { color: #f19a7f; background: #2b211f; border-color: #53362f; }
+.dark .stats .remaining-stat { background: #182821 !important; border-color: #285140 !important; }
+.dark .stage-stat { background: #211f38 !important; border-color: #403b70 !important; }
+.dark .live-state { color: #70d4b7; background: #173129; }
+.dark .admin-panel { color: #e9edf7; background: #111722; }
+.dark .admin-header, .dark .admin-tabs, .dark .admin-form, .dark .admin-save-bar { color: #e9edf7; background: #171d2a; border-color: #30394d; }
+.dark .admin-tabs button { color: #98a3b8; }
+.dark .admin-tabs button.selected { color: #b8b0ff; background: #2a2548; }
+.dark .modal { color: #e9edf7; background: #171d2a; }
+.dark .weather-card { color: #e9edf7; background: #171d2a; border-color: #30394d; }
+.dark .audience-details strong, .dark .audience-total em, .dark .clubs-heading p, .dark .next-person p, .dark .next-person span, .dark .waiting-row small { color: #9da8bc; }
