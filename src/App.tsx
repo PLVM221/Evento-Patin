@@ -64,7 +64,7 @@ type PublicControls = {
   closingMessage: string
 }
 
-const defaultPublicControls: PublicControls = { announcement: '', announcementTone: 'info', highlightNext: false, eventClosed: false, closingMessage: 'Gracias por acompañarnos. ¡Nos vemos en el próximo encuentro!' }
+const defaultPublicControls: PublicControls = { announcement: '', announcementTone: 'info', highlightNext: false, eventClosed: false, closingMessage: 'Nos vemos en el próximo evento.' }
 
 function audienceMetadata(sessionId: string): AudiencePresence {
   const ua = navigator.userAgent
@@ -103,7 +103,10 @@ function OperatorApp({ userId }: { userId: string }) {
     return id
   })
   const [publicControls, setPublicControls] = useState<PublicControls>(() => {
-    try { return { ...defaultPublicControls, ...JSON.parse(localStorage.getItem(`pista-public-controls-${liveChannel}`) ?? '{}') } }
+    try {
+      const saved = { ...defaultPublicControls, ...JSON.parse(localStorage.getItem(`pista-public-controls-${liveChannel}`) ?? '{}') } as PublicControls
+      return saved.closingMessage === 'Gracias por acompañarnos. ¡Nos vemos en el próximo encuentro!' ? { ...saved, closingMessage: defaultPublicControls.closingMessage } : saved
+    }
     catch { return defaultPublicControls }
   })
   const [announcementDraft, setAnnouncementDraft] = useState('')
