@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 16:28 | feat(audio): audios generales sin club pueden cargarse por etapa, reproducirse en orden y mostrarse correctamente en operador y QR |
 | 14:20 | fix(qr): recarga espera snapshot real antes de renderizar y elimina flash de datos iniciales |
 | 14:42 | feat(audiencia): operador ve presencia QR anónima en vivo con dispositivos, navegadores, sistemas e idiomas |
 | 14:50 | style(audiencia): tarjeta QR ubicada entre datos del evento y cuenta regresiva |

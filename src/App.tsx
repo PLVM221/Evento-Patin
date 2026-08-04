@@ -12,7 +12,7 @@ import { useFestival } from './hooks/useFestival'
 import { audioPreflight, estimateFinish } from './lib/operations.mjs'
 import { supabase } from './lib/supabase'
 import { createId } from './lib/id'
-import { formatTime, fullName, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
+import { formatTime, fullName, isEntryEnabled, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
 
 function useCountdown(eventDate: string, startTime: string) {
   const [now, setNow] = useState(Date.now())
@@ -39,6 +39,12 @@ function useRemainingUntil(target?: string) {
   const totalSeconds = Math.max(0, Math.floor((new Date(target).getTime() - now) / 1000))
   return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}:${String(totalSeconds % 60).padStart(2, '0')}`
 }
+
+const entryPrimary = (entry: Pick<Skater, 'entryType' | 'firstName' | 'lastName' | 'club' | 'track'>, showSkaters: boolean) =>
+  entry.entryType === 'general' ? entry.track : showSkaters ? `${entry.firstName} ${entry.lastName}` : entry.club
+
+const entrySecondary = (entry: Pick<Skater, 'entryType' | 'club' | 'track'>, showSkaters: boolean) =>
+  entry.entryType === 'general' ? 'Audio general del evento' : showSkaters ? entry.club : entry.track
 
 type AudiencePresence = {
   sessionId: string
@@ -154,9 +160,9 @@ function OperatorApp({ userId }: { userId: string }) {
       gain: 1,
     },
   ])
-  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage && skater.status !== 'ABSENT' && (state.showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club'))
+  const stageSkaters = state.skaters.filter((skater) => skater.stageNumber === state.currentStage && skater.status !== 'ABSENT' && isEntryEnabled(skater, state.showSkaters))
   const active = stageSkaters.find((skater) => skater.id === state.activeId)
-  const activeTeachers = active ? state.teachers.filter((teacher) => teacher.club === active.club) : []
+  const activeTeachers = active?.entryType !== 'general' ? state.teachers.filter((teacher) => teacher.club === active?.club) : []
   const waiting = stageSkaters.filter((skater) => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
   const finished = stageSkaters.filter((skater) => skater.status === 'FINISHED').length
@@ -216,8 +222,9 @@ function OperatorApp({ userId }: { userId: string }) {
           return [stage, state.stageOrders[stage] ?? state.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)]
         }),
       ),
-      skaters: state.skaters.filter(({ status, entryType }) => status !== 'ABSENT' && (state.showSkaters ? entryType !== 'club' : entryType === 'club')).map(({ id, number, firstName, lastName, club, track, status, stageNumber }) => ({
+      skaters: state.skaters.filter((skater) => skater.status !== 'ABSENT' && isEntryEnabled(skater, state.showSkaters)).map(({ id, entryType, number, firstName, lastName, club, track, status, stageNumber }) => ({
         id,
+        entryType,
         number,
         firstName,
         lastName,
@@ -625,7 +632,7 @@ function OperatorApp({ userId }: { userId: string }) {
             {active ? (
               <>
                 {state.showSkaters && <div className="bib">Nº {active.number}</div>}
-                <div className="active-identity"><div className="active-club-logo">{state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><small>CLUB</small><h1>{active.club}</h1>{state.showSkaters && <p className="active-skater-name">Patinadora: {fullName(active)}</p>}</div></div>
+                <div className="active-identity"><div className="active-club-logo">{active.entryType === 'general' ? '♫' : state.clubLogos[active.club] ? <img src={state.clubLogos[active.club]} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div><div><small>{active.entryType === 'general' ? 'AUDIO DEL EVENTO' : 'CLUB'}</small><h1>{active.entryType === 'general' ? 'Audio general' : active.club}</h1>{state.showSkaters && active.entryType !== 'general' && <p className="active-skater-name">Patinadora: {fullName(active)}</p>}</div></div>
                 <div className="track">
                   <span>♫</span>
                   <div>
@@ -634,7 +641,7 @@ function OperatorApp({ userId }: { userId: string }) {
                     <em>{active.category}</em>
                   </div>
                 </div>
-                <div className="active-teacher"><small>SEÑO</small><strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>
+                {active.entryType !== 'general' && <div className="active-teacher"><small>SEÑO</small><strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
                 <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={(value) => setVolume('musicVolume', value)} />
                 <div className="critical-actions">
                   <button disabled={!state.started} className="finish" onClick={finalize}>
@@ -658,12 +665,12 @@ function OperatorApp({ userId }: { userId: string }) {
             {next && (
               <div className="next-person">
                 <div className="avatar">
-                  {(state.clubLogos[next.club] || (next.club === state.organizer ? state.organizerLogo : '')) ? <img src={state.clubLogos[next.club] || state.organizerLogo} alt={`Escudo de ${next.club}`} /> : next.club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}
+                  {next.entryType === 'general' ? '♫' : (state.clubLogos[next.club] || (next.club === state.organizer ? state.organizerLogo : '')) ? <img src={state.clubLogos[next.club] || state.organizerLogo} alt={`Escudo de ${next.club}`} /> : next.club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}
                 </div>
                 <div>
-                  <small>{state.showSkaters ? `PRÓXIMA PATINADORA · Nº ${next.number}` : 'PRÓXIMA COREOGRAFÍA'}</small>
-                  <h2>{state.showSkaters ? fullName(next) : next.club}</h2>
-                  {state.showSkaters && <p>{next.club}</p>}
+                  <small>{next.entryType === 'general' ? 'PRÓXIMO AUDIO GENERAL' : state.showSkaters ? `PRÓXIMA PATINADORA · Nº ${next.number}` : 'PRÓXIMA COREOGRAFÍA'}</small>
+                  <h2>{entryPrimary(next, state.showSkaters)}</h2>
+                  {(state.showSkaters || next.entryType === 'general') && <p>{entrySecondary(next, state.showSkaters)}</p>}
                   <span>
                     ♫ {next.track} · {formatTime(next.duration)}
                   </span>
@@ -675,8 +682,8 @@ function OperatorApp({ userId }: { userId: string }) {
               <div className="waiting-row" key={skater.id}>
                 <b>{index + 2}</b>
                 <div>
-                  <strong>{state.showSkaters ? fullName(skater) : skater.club}</strong>
-                  <small>{state.showSkaters ? skater.club : skater.track}</small>
+                  <strong>{entryPrimary(skater, state.showSkaters)}</strong>
+                  <small>{entrySecondary(skater, state.showSkaters)}</small>
                 </div>
                 {state.showSkaters && <span>{skater.number}</span>}
               </div>
@@ -900,7 +907,7 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
 }
 
 type PublicState = Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'stageCount' | 'showSkaters' | 'currentStage' | 'completedStages' | 'started' | 'actualStartedAt' | 'activeBreakAfter' | 'breakEndsAt' | 'breakDurationMinutes' | 'clubs' | 'clubLogos' | 'teachers' | 'buffetItems' | 'showBuffet' | 'showRaffle' | 'useFrameOnBuffet' | 'useFrameOnRaffle' | 'raffleTicketPrice' | 'rafflePrices' | 'rafflePrizes' | 'activeId' | 'stageOrders'> & PublicControls & {
-  skaters: Array<Pick<Skater, 'id' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
+  skaters: Array<Pick<Skater, 'id' | 'entryType' | 'number' | 'firstName' | 'lastName' | 'club' | 'track' | 'status' | 'stageNumber'>>
 }
 
 function PublicView({ state, connected }: { state: PublicState; connected: boolean }) {
@@ -910,7 +917,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
   const [raffleOpen, setRaffleOpen] = useState(false)
   useEffect(() => setLive(state), [state])
   const active = live.skaters.find((skater) => skater.id === live.activeId)
-  const activeTeachers = active ? (live.teachers ?? []).filter((teacher) => teacher.club === active.club) : []
+  const activeTeachers = active?.entryType !== 'general' ? (live.teachers ?? []).filter((teacher) => teacher.club === active?.club) : []
   const pending = live.skaters.filter((skater) => skater.stageNumber === live.currentStage && (skater.status === 'PENDING' || skater.status === 'READY'))
   const countdown = useCountdown(live.eventDate, live.startTime)
   const breakCountdown = useRemainingUntil(live.breakEndsAt)
@@ -974,8 +981,8 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
                       <div className="public-row" key={id}>
                         <b>{order + 1}</b>
                         <span>
-                          {live.showSkaters ? fullName(skater as Skater) : skater.club}
-                          {live.showSkaters && <small>{skater.club}</small>}
+                          {entryPrimary(skater, live.showSkaters)}
+                          {(live.showSkaters || skater.entryType === 'general') && <small>{entrySecondary(skater, live.showSkaters)}</small>}
                         </span>
                         <em>{skater.track}</em>
                       </div>
@@ -990,17 +997,17 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
         <>
           <section className="public-now">
             <small>EN PISTA</small>
-            <div className={`public-active-main${active ? '' : ' no-active'}`}>{active && <div className="public-active-logo">{(live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>{active ? 'CLUB' : 'ESTADO'}</small><h2>{active?.club ?? 'Esperando primera pasada'}</h2></div></div>
+            <div className={`public-active-main${active ? '' : ' no-active'}`}>{active && <div className="public-active-logo">{active.entryType === 'general' ? '♫' : (live.clubLogos?.[active.club] || (active.club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[active.club] || live.organizerLogo} alt={`Escudo de ${active.club}`} /> : active.club.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</div>}<div><small>{active ? active.entryType === 'general' ? 'AUDIO DEL EVENTO' : 'CLUB' : 'ESTADO'}</small><h2>{active ? active.entryType === 'general' ? 'Audio general' : active.club : 'Esperando primera pasada'}</h2></div></div>
             {active && <div className="public-coreography"><small>COREOGRAFÍA</small><strong>{active.track}</strong>{live.showSkaters && <span>Patinadora: {fullName(active as Skater)}</span>}</div>}
-            {active && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
+            {active && active.entryType !== 'general' && <div className="public-active-teacher">Seño: <strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
           </section>
           <div className="public-columns">
             <div className={`public-next${live.highlightNext ? ' highlighted' : ''}`}>
-              {pending[0] && <div className="public-next-logo">{(live.clubLogos?.[pending[0].club] || (pending[0].club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[pending[0].club] || live.organizerLogo} alt={`Escudo de ${pending[0].club}`} /> : pending[0].club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>}
+              {pending[0] && <div className="public-next-logo">{pending[0].entryType === 'general' ? '♫' : (live.clubLogos?.[pending[0].club] || (pending[0].club === live.organizer ? live.organizerLogo : '')) ? <img src={live.clubLogos?.[pending[0].club] || live.organizerLogo} alt={`Escudo de ${pending[0].club}`} /> : pending[0].club.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>}
               <div>
                 <small>{live.highlightNext ? 'PREPARARSE · A CONTINUACIÓN' : 'A CONTINUACIÓN'}</small>
-                <h3>{pending[0] ? (live.showSkaters ? fullName(pending[0] as Skater) : pending[0].club) : '—'}</h3>
-                <p>{live.showSkaters ? pending[0]?.club : pending[0]?.track}</p>
+                <h3>{pending[0] ? entryPrimary(pending[0], live.showSkaters) : '—'}</h3>
+                <p>{pending[0] ? entrySecondary(pending[0], live.showSkaters) : ''}</p>
               </div>
             </div>
             <div>
@@ -1017,8 +1024,8 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
             <div className="public-row" key={skater.id}>
               <b>{index + 2}</b>
               <span>
-                {live.showSkaters ? fullName(skater as Skater) : skater.club}
-                {live.showSkaters && <small>{skater.club}</small>}
+                {entryPrimary(skater, live.showSkaters)}
+                {(live.showSkaters || skater.entryType === 'general') && <small>{entrySecondary(skater, live.showSkaters)}</small>}
               </span>
               <em>{skater.track}</em>
             </div>

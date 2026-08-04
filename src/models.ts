@@ -41,7 +41,7 @@ export interface AuditEntry {
 
 export interface Skater {
   id: string
-  entryType?: 'skater' | 'club'
+  entryType?: 'skater' | 'club' | 'general'
   number: number
   firstName: string
   lastName: string
@@ -117,6 +117,9 @@ export const canTransitionStatus = (from: SkaterStatus, to: SkaterStatus) => {
 }
 
 export const fullName = (skater: Skater) => `${skater.firstName} ${skater.lastName}`
+
+export const isEntryEnabled = (skater: Pick<Skater, 'entryType'>, showSkaters: boolean) =>
+  skater.entryType === 'general' || (showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club')
 
 export const formatTime = (seconds: number) => {
   const value = Math.max(0, Math.floor(seconds))

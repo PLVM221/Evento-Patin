@@ -105,6 +105,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'sorteo' && <VisibilityToggle checked={state.useFrameOnRaffle} title="Usar el marco del QR en Sorteo" onChange={visible => onSetPublicSectionVisibility('useFrameOnRaffle', visible)} />}
           {tab === 'evento' && <EventForm state={state} onSave={onUpdateEvent} onClearAll={onClearAll} />}
           {state.showSkaters && tab === 'participantes' && <SkaterAdmin state={state} onAdd={onAddSkater} onImport={onImportSkaters} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
+          {tab === 'pasadas' && <GeneralAudioAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'pasadas' && <PassAdmin state={state} onAdd={onAddSkater} onUpdate={onUpdateSkater} onRemove={onRemoveSkater} />}
           {tab === 'senos' && <TeacherAdmin state={state} onAdd={onAddTeacher} onRemove={onRemoveTeacher} />}
           {tab === 'clubes' && <ClubAdmin state={state} clubs={clubs} logos={state.clubLogos} onRename={onRenameClub} onAdd={onAddClub} onRemove={onRemoveClub} onLogo={onUpdateClubLogo} />}
@@ -198,6 +199,19 @@ function SkaterAdmin({ state, onAdd, onImport, onUpdate, onRemove }: { state: Fe
     <label className="file-btn">Importar CSV<input type="file" accept=".csv,text/csv" onChange={event => void importCsv(event.target.files?.[0])} /></label><small className="field-help">Columnas: número; nombre; apellido; club; categoría; etapa; canción; duración; tanda.</small>
     <div className="admin-list">{state.skaters.map(skater => <div className={`admin-skater ${skater.status === 'ABSENT' ? 'not-participating' : ''}`} key={skater.id}><label className="participation-check"><input type="checkbox" checked={skater.status !== 'ABSENT'} disabled={skater.status === 'FINISHED' || skater.status === 'SKATING'} onChange={event => onUpdate(skater.id, { status: event.target.checked ? 'PENDING' : 'ABSENT' })} /><span>Participa</span></label><div><strong>{fullName(skater)}</strong><select aria-label={`Club de ${fullName(skater)}`} value={skater.club} onChange={event => onUpdate(skater.id, { club: event.target.value })}>{state.clubs.map(club => <option key={club}>{club}</option>)}</select></div><input aria-label="Coreografía o canción" value={skater.track} onChange={event => onUpdate(skater.id, { track: event.target.value })} /><select aria-label="Etapa" value={skater.stageNumber} onChange={event => onUpdate(skater.id, { stageNumber: Number(event.target.value) as 1 | 2 | 3 })}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button className="delete-skater" onClick={() => window.confirm(`¿Eliminar a ${fullName(skater)}?`) && onRemove(skater.id)}>Eliminar</button></div>)}</div>
   </div>
+}
+
+function GeneralAudioAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
+  const [track, setTrack] = useState('')
+  const [stageNumber, setStageNumber] = useState<Skater['stageNumber']>(1)
+  const entries = state.skaters.filter(item => item.entryType === 'general')
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    if (!track.trim()) return
+    onAdd({ entryType: 'general', number: state.skaters.length + 1, firstName: 'Audio', lastName: 'general', club: 'Audio general', category: '', track: track.trim(), duration: 180, heat: 'Tanda 1', stageNumber, notes: '' })
+    setTrack('')
+  }
+  return <div><div className="admin-intro"><h3>Audio general / Apertura</h3><p>Agregá música del evento sin vincularla a ningún club. Después cargá el archivo desde Audios.</p></div><form className="teacher-add" onSubmit={submit}><input required placeholder="Nombre del audio, por ejemplo Apertura" value={track} onChange={event => setTrack(event.target.value)} /><select value={stageNumber} onChange={event => setStageNumber(Number(event.target.value) as Skater['stageNumber'])}>{Array.from({ length: state.stageCount }, (_, index) => <option key={index + 1} value={index + 1}>Etapa {index + 1}</option>)}</select><button><Plus /> Agregar audio general</button></form>{entries.length > 0 && <div className="admin-list">{entries.map((entry, index) => <div className="admin-skater" key={entry.id}><b>♫ {index + 1}</b><strong>Audio general</strong><input aria-label="Nombre del audio general" value={entry.track} onChange={event => onUpdate(entry.id, { track: event.target.value })} /><select value={entry.stageNumber} onChange={event => onUpdate(entry.id, { stageNumber: Number(event.target.value) as Skater['stageNumber'] })}>{Array.from({ length: state.stageCount }, (_, stage) => <option key={stage + 1} value={stage + 1}>Etapa {stage + 1}</option>)}</select><button className="delete-skater" onClick={() => onRemove(entry.id)}>Eliminar</button></div>)}</div>}</div>
 }
 
 function PassAdmin({ state, onAdd, onUpdate, onRemove }: { state: FestivalState; onAdd: Props['onAddSkater']; onUpdate: Props['onUpdateSkater']; onRemove: Props['onRemoveSkater'] }) {
