@@ -1,5 +1,5 @@
 import { Pause, Play, RotateCcw, SkipBack, SkipForward, Square } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import type { Skater } from '../models'
 import { formatTime } from '../models'
 
@@ -11,15 +11,24 @@ interface PlayerProps {
   disabled?: boolean
 }
 
-export function Player({ skater, elapsed, volume, onVolume, disabled = false }: PlayerProps) {
+function PlayerComponent({ skater, elapsed, volume, onVolume, disabled = false }: PlayerProps) {
   const [playing, setPlaying] = useState(false)
   const [position, setPosition] = useState(elapsed)
+  const [audioSource, setAudioSource] = useState(skater?.audioUrl ?? '')
   const audio = useRef<HTMLAudioElement>(null)
+  const entrySnapshot = useRef({ elapsed, audioUrl: skater?.audioUrl ?? '' })
+  entrySnapshot.current = { elapsed, audioUrl: skater?.audioUrl ?? '' }
 
   useEffect(() => {
-    setPosition(elapsed)
+    audio.current?.pause()
+    setPosition(entrySnapshot.current.elapsed)
     setPlaying(false)
-  }, [skater?.id, elapsed])
+    setAudioSource(entrySnapshot.current.audioUrl)
+  }, [skater?.id])
+
+  useEffect(() => {
+    if (skater?.audioUrl) setAudioSource(current => current || skater.audioUrl || '')
+  }, [skater?.audioUrl])
 
   useEffect(() => {
     if (!playing || !skater || skater.audioUrl) return
@@ -38,8 +47,10 @@ export function Player({ skater, elapsed, volume, onVolume, disabled = false }: 
 
   const toggle = () => {
     const next = !playing
-    setPlaying(next)
-    if (audio.current) void (next ? audio.current.play() : audio.current.pause())
+    const element = audio.current
+    if (!element) { setPlaying(next); return }
+    if (!next) { element.pause(); setPlaying(false); return }
+    void element.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
   }
 
   const stopWithFade = () => {
@@ -81,8 +92,10 @@ export function Player({ skater, elapsed, volume, onVolume, disabled = false }: 
         <button disabled={disabled} className="icon-btn" title="Reiniciar" onClick={() => seek(0)}><RotateCcw /></button>
         <label className="volume">VOL <input aria-label="Volumen música" type="range" min="0" max="100" value={volume} onChange={event => onVolume(Number(event.target.value))} /><strong>{volume}%</strong></label>
       </div>
-      {skater?.audioUrl && <audio ref={audio} src={skater.audioUrl} preload="auto" onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onEnded={() => setPlaying(false)} onError={() => setPlaying(false)} />}
-      {!skater?.audioUrl && <small className="no-audio">Sin archivo musical asociado · Administrar → Audios</small>}
+      <audio ref={audio} src={audioSource || undefined} preload="auto" onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onEnded={() => setPlaying(false)} onError={() => setPlaying(false)} />
+      {!audioSource && <small className="no-audio">Sin archivo musical asociado · Administrar → Audios</small>}
     </div>
   )
 }
+
+export const Player = memo(PlayerComponent, (previous, next) => previous.skater?.id === next.skater?.id && previous.skater?.audioUrl === next.skater?.audioUrl && previous.skater?.duration === next.skater?.duration && previous.elapsed === next.elapsed && previous.volume === next.volume && previous.disabled === next.disabled)

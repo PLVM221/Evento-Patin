@@ -16,6 +16,17 @@ const withoutRuntimeAudio = (state: FestivalState): FestivalState => ({
   skaters: state.skaters.map(({ audioUrl: _audioUrl, ...skater }) => skater),
 })
 
+const preserveRuntimeAudio = (incoming: FestivalState, current: FestivalState): FestivalState => {
+  const runtimeById = new Map(current.skaters.map(skater => [skater.id, skater]))
+  return {
+    ...incoming,
+    skaters: incoming.skaters.map(skater => {
+      const runtime = runtimeById.get(skater.id)
+      return runtime && runtime.audioName === skater.audioName && runtime.audioUrl ? { ...skater, audioUrl: runtime.audioUrl, audioReady: true } : skater
+    }),
+  }
+}
+
 const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStageCompleted?: boolean }): FestivalState => ({
       ...initialFestival,
       ...parsed,
@@ -148,7 +159,7 @@ export function useFestival(userId = 'public') {
       if (!active) return
       if (!error && data?.data && (readOnly || (!saving.current && !pendingSave.current))) {
         applyingRemote.current = true
-        setState(normalize(data.data as Partial<FestivalState>))
+        setState(current => preserveRuntimeAudio(normalize(data.data as Partial<FestivalState>), current))
       } else if (!error && !readOnly) {
         await supabase.from('festival_state').upsert({ id: stateId, owner_id: userId, data: withoutRuntimeAudio(initialState.current), revision: initialState.current.revision, updated_at: new Date().toISOString() })
       }
@@ -160,7 +171,7 @@ export function useFestival(userId = 'public') {
       const row = payload.new as { data?: Partial<FestivalState> }
       if (row.data && (readOnly || (!saving.current && !pendingSave.current))) {
         applyingRemote.current = true
-        setState(normalize(row.data))
+        setState(current => preserveRuntimeAudio(normalize(row.data!), current))
       }
     }).subscribe()
     const resume = () => { if (document.visibilityState === 'visible') void load() }
@@ -186,7 +197,13 @@ export function useFestival(userId = 'public') {
         const blob = await loadTrack(skater.id).catch(() => undefined)
         return blob ? { ...skater, audioUrl: URL.createObjectURL(blob), audioReady: true } : { ...skater, audioReady: false }
       }))
-      if (!cancelled && hydrated.some((item, index) => item !== state.skaters[index])) setState(current => ({ ...current, skaters: hydrated }))
+      if (!cancelled && hydrated.some((item, index) => item !== state.skaters[index])) {
+        const hydratedById = new Map(hydrated.map(skater => [skater.id, skater]))
+        setState(current => ({ ...current, skaters: current.skaters.map(skater => {
+          const loaded = hydratedById.get(skater.id)
+          return loaded && loaded.audioName === skater.audioName && loaded.audioUrl && !skater.audioUrl ? { ...skater, audioUrl: loaded.audioUrl, audioReady: true } : skater
+        }) }))
+      }
     }
     void hydrate()
     return () => { cancelled = true }

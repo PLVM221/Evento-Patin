@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 09:42 | fix(audio): reproductor conserva fuente local ante sincronizaciones, queda aislado de re-renders y evita que hidratación asíncrona pise cambios |
 | 09:10 | feat(checklist): control previo valida audios, etapas, profes, datos del evento y conexión QR antes de comenzar |
 
 ### 2026-08-04
