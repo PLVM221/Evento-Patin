@@ -81,6 +81,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const [selected, setSelected] = useState<Skater>()
   const [adminOpen, setAdminOpen] = useState(false)
   const [dark, setDark] = useState(() => localStorage.getItem('pista-theme') === 'dark')
+  const [audioEnhanced, setAudioEnhanced] = useState(() => localStorage.getItem('pista-audio-enhancement') === 'true')
   const [qrOpen, setQrOpen] = useState(false)
   const [qrImage, setQrImage] = useState('')
   const [relayState, setRelayState] = useState<Partial<PublicState>>({})
@@ -202,6 +203,10 @@ function OperatorApp({ userId }: { userId: string }) {
   useEffect(() => {
     localStorage.setItem('pista-theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  useEffect(() => {
+    localStorage.setItem('pista-audio-enhancement', String(audioEnhanced))
+  }, [audioEnhanced])
 
   useEffect(() => {
     if (!state.started) return
@@ -668,7 +673,7 @@ function OperatorApp({ userId }: { userId: string }) {
                   </div>
                 </div>
                 {active.entryType !== 'general' && <div className="active-teacher"><small>PROFE</small><strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
-                <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} onVolume={(value) => setVolume('musicVolume', value)} />
+                <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} enhanced={audioEnhanced} onEnhanced={setAudioEnhanced} onVolume={(value) => setVolume('musicVolume', value)} />
                 <div className="critical-actions">
                   <button disabled={!state.started} className="finish" onClick={finalize}>
                     <Check /> FINALIZAR

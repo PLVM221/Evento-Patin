@@ -102,3 +102,31 @@
   .prestart-checklist > div { grid-template-columns: 1fr; }
   .prestart-checklist article { border-right: 0; }
 }
+
+.player-controls .enhance-audio {
+  display: flex;
+  min-width: 78px;
+  height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid #dcd8ff;
+  border-radius: 10px;
+  color: #675bd8;
+  background: #f1efff;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.enhance-audio > svg { width: 14px; }
+.enhance-audio span, .enhance-audio strong, .enhance-audio small { display: block; text-align: left; }
+.enhance-audio strong { font-size: 7px; letter-spacing: 0.7px; }
+.enhance-audio small { margin-top: 1px; font-size: 7px; }
+.player-controls .enhance-audio.active { color: #fff; background: linear-gradient(135deg, #675bd8, #2bad83); border-color: transparent; box-shadow: 0 5px 14px #4a9c8633; }
+.player-controls .enhance-audio.active > svg { animation: pulse 1.6s infinite; }
+.dark .player-controls .enhance-audio { color: #bbb4ff; background: #292545; border-color: #47406f; }
+.dark .player-controls .enhance-audio.active { color: #fff; background: linear-gradient(135deg, #776be5, #289c7d); }
+
+@media (max-width: 700px) {
+  .player-controls { flex-wrap: wrap; }
+  .player-controls .enhance-audio { order: 2; }
+}
