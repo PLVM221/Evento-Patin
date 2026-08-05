@@ -4,6 +4,7 @@
 
 | Hora | Cambio |
 |------|--------|
+| 10:17 | fix(tema): switch Luna/Sol corrige superposición con cápsula y perilla circular tipo red social |
 | 10:08 | feat(audio): mejora inteligente opcional suma ecualización, compresión y limitador Web Audio con transición sin chasquidos |
 | 09:42 | fix(audio): reproductor conserva fuente local ante sincronizaciones, queda aislado de re-renders y evita que hidratación asíncrona pise cambios |
 | 09:10 | feat(checklist): control previo valida audios, etapas, profes, datos del evento y conexión QR antes de comenzar |
