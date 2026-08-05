@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock3, Laptop, Maximize2, Mic2, Moon, QrCode, Radio, RefreshCcw, Search, Settings, ShoppingBasket, Smartphone, Sparkles, Sun, Tablet, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Laptop, Maximize2, Mic2, Moon, QrCode, Radio, RefreshCcw, Search, Settings, ShoppingBasket, Smartphone, Sparkles, Sun, Tablet, Trophy, Undo2, Users, Volume2, VolumeX } from 'lucide-react'
 import QRCode from 'qrcode'
 import { Player } from './components/Player'
 import { Queue } from './components/Queue'
@@ -177,6 +177,21 @@ function OperatorApp({ userId }: { userId: string }) {
   const breakCountdown = useRemainingUntil(state.breakEndsAt)
   const estimatedFinish = estimateFinish(state)
   const preflight = audioPreflight(state)
+  const enabledEntries = state.skaters.filter(skater => skater.status !== 'ABSENT' && isEntryEnabled(skater, state.showSkaters))
+  const emptyStages = Array.from({ length: state.stageCount }, (_, index) => (index + 1) as StageNumber).filter(stage => !enabledEntries.some(entry => entry.stageNumber === stage))
+  const participatingClubs = [...new Set(enabledEntries.filter(entry => entry.entryType !== 'general').map(entry => entry.club).filter(Boolean))]
+  const clubsWithoutTeacher = participatingClubs.filter(club => !state.teachers.some(teacher => teacher.club === club))
+  const missingSchedule = [!state.name.trim() && 'nombre', !state.eventDate && 'fecha', !state.startTime && 'hora', !state.location.trim() && 'lugar'].filter(Boolean) as string[]
+  const qrReady = Boolean(qrLastPublishedAt) && !qrSyncError
+  const checklist = [
+    { label: 'Audios', ok: preflight.complete, detail: preflight.complete ? `${preflight.ready} audios listos` : `Faltan ${preflight.total - preflight.ready} audios`, blocking: false },
+    { label: 'Etapas', ok: emptyStages.length === 0, detail: emptyStages.length ? `Vacías: ${emptyStages.join(', ')}` : `${state.stageCount} etapas con pasadas`, blocking: true },
+    { label: 'Profes', ok: clubsWithoutTeacher.length === 0, detail: clubsWithoutTeacher.length ? `${clubsWithoutTeacher.length} clubes sin profe` : 'Todos los clubes asignados', blocking: false },
+    { label: 'Evento', ok: missingSchedule.length === 0, detail: missingSchedule.length ? `Falta ${missingSchedule.join(', ')}` : `${state.eventDate} · ${state.startTime} hs`, blocking: true },
+    { label: 'Web QR', ok: qrReady, detail: qrSyncError ? 'Error de sincronización' : qrReady ? `Sincronizada${audience.length ? ` · ${audience.length} conectadas` : ' · sin pantallas abiertas'}` : 'Comprobando conexión…', blocking: false },
+  ]
+  const checklistIssues = checklist.filter(item => !item.ok)
+  const checklistBlockers = checklistIssues.filter(item => item.blocking)
   const publicChannel = new URLSearchParams(window.location.search).get('publico')
   const publicUrl = `${window.location.origin}${window.location.pathname}?publico=${liveChannel}`
 
@@ -566,6 +581,8 @@ function OperatorApp({ userId }: { userId: string }) {
         )}
         {state.actualStartedAt && <div className="operator-started">TORNEO INICIADO · {new Date(state.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>}
 
+        {!state.actualStartedAt && state.completedStages.length === 0 && <section className={`prestart-checklist${checklistIssues.length ? '' : ' ready'}`}><header><div><small>CONTROL PREVIO</small><strong>{checklistIssues.length ? `${checklistIssues.length} puntos para revisar` : 'Todo listo para comenzar'}</strong></div><span>{checklist.length - checklistIssues.length}/{checklist.length}</span></header><div>{checklist.map(item => <article className={item.ok ? 'ok' : item.blocking ? 'blocked' : 'warning'} key={item.label}>{item.ok ? <CheckCircle2 /> : <AlertTriangle />}<span><strong>{item.label}</strong><small>{item.detail}</small></span></article>)}</div></section>}
+
         <div className="stage-controls">
           {Array.from({ length: state.stageCount }, (_, index) => {
             const stage = (index + 1) as StageNumber
@@ -584,6 +601,8 @@ function OperatorApp({ userId }: { userId: string }) {
               if (state.started) {
                 if (waiting.length > 0 || active) window.alert(`Todavía quedan ${(waiting.length + (active ? 1 : 0))} pasadas en la etapa ${stage}. Finalizalas antes de cerrar la etapa.`)
                 else if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage()
+              } else if (checklistBlockers.length > 0) {
+                window.alert(`No se puede iniciar todavía:\n${checklistBlockers.map(item => `• ${item.label}: ${item.detail}`).join('\n')}`)
               } else if (stageSkaters.length === 0) {
                 window.alert(state.showSkaters ? 'No hay patinadoras habilitadas en esta etapa.' : 'No hay pasadas de clubes cargadas en esta etapa. Cargalas en Administrar → Pasadas.')
               } else if (window.confirm(`¿Iniciar etapa ${stage}?`)) start()

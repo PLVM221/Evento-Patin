@@ -20,3 +20,15 @@ test('estima sólo las participantes restantes de la etapa actual', () => {
 test('preflight ignora finalizadas y ausentes', () => {
   assert.deepEqual(audioPreflight(state), { ready: 2, total: 3, complete: false })
 })
+
+test('preflight revisa el modo activo y siempre incluye audios generales', () => {
+  const entries = {
+    showSkaters: false,
+    skaters: [
+      { entryType: 'skater', status: 'PENDING', audioReady: false },
+      { entryType: 'club', status: 'PENDING', audioReady: true },
+      { entryType: 'general', status: 'PENDING', audioReady: false },
+    ],
+  }
+  assert.deepEqual(audioPreflight(entries), { ready: 1, total: 2, complete: false })
+})

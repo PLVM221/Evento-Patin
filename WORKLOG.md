@@ -1,5 +1,11 @@
 # WORKLOG
 
+### 2026-08-05
+
+| Hora | Cambio |
+|------|--------|
+| 09:10 | feat(checklist): control previo valida audios, etapas, profes, datos del evento y conexión QR antes de comenzar |
+
 ### 2026-08-04
 
 | Hora | Cambio |
