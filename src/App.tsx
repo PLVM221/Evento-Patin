@@ -172,7 +172,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const finished = stageSkaters.filter((skater) => skater.status === 'FINISHED').length
   const visible = useMemo(() => stageSkaters.filter((skater) => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [stageSkaters, query])
   const suggestions = query.trim().length ? visible.slice(0, 6) : []
-  const stageName = `Etapa ${state.currentStage} de ${state.stageCount}`
+  const stageName = `${state.currentStage}º Parte de ${state.stageCount}`
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
   const countdown = useCountdown(state.eventDate, state.startTime)
   const breakCountdown = useRemainingUntil(state.breakEndsAt)
@@ -186,7 +186,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const qrReady = Boolean(qrLastPublishedAt) && !qrSyncError
   const checklist = [
     { label: 'Audios', ok: preflight.complete, detail: preflight.complete ? `${preflight.ready} audios listos` : `Faltan ${preflight.total - preflight.ready} audios`, blocking: false },
-    { label: 'Etapas', ok: emptyStages.length === 0, detail: emptyStages.length ? `Vacías: ${emptyStages.join(', ')}` : `${state.stageCount} etapas con pasadas`, blocking: true },
+    { label: 'Partes', ok: emptyStages.length === 0, detail: emptyStages.length ? `Vacías: ${emptyStages.map(stage => `${stage}º Parte`).join(', ')}` : `${state.stageCount} partes con pasadas`, blocking: true },
     { label: 'Profes', ok: clubsWithoutTeacher.length === 0, detail: clubsWithoutTeacher.length ? `${clubsWithoutTeacher.length} clubes sin profe` : 'Todos los clubes asignados', blocking: false },
     { label: 'Evento', ok: missingSchedule.length === 0, detail: missingSchedule.length ? `Falta ${missingSchedule.join(', ')}` : `${state.eventDate} · ${state.startTime} hs`, blocking: true },
     { label: 'Web QR', ok: qrReady, detail: qrSyncError ? 'Error de sincronización' : qrReady ? `Sincronizada${audience.length ? ` · ${audience.length} conectadas` : ' · sin pantallas abiertas'}` : 'Comprobando conexión…', blocking: false },
@@ -427,11 +427,11 @@ function OperatorApp({ userId }: { userId: string }) {
 
   const downloadEventList = () => {
     const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
-    const rows: Array<Array<string | number>> = [['Evento', state.name], ['Club organizador', state.organizer], ['Cantidad de etapas', state.stageCount], [], ['Etapa', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía']]
+    const rows: Array<Array<string | number>> = [['Evento', state.name], ['Club organizador', state.organizer], ['Cantidad de partes', state.stageCount], [], ['Parte', 'Orden', 'Número', 'Patinadora', 'Club', 'Coreografía']]
     for (let stage = 1; stage <= state.stageCount; stage += 1) {
       const savedOrder = state.stageOrders[stage as 1 | 2 | 3]
       const ordered = savedOrder ? savedOrder.map((id) => state.skaters.find((skater) => skater.id === id)).filter((skater): skater is Skater => Boolean(skater)) : state.skaters.filter((skater) => skater.stageNumber === stage)
-      ordered.forEach((skater, index) => rows.push([`Etapa ${stage}`, index + 1, skater.number, fullName(skater), skater.club, skater.track]))
+      ordered.forEach((skater, index) => rows.push([`${stage}º Parte`, index + 1, skater.number, fullName(skater), skater.club, skater.track]))
     }
     const csv = `\uFEFF${rows.map((row) => row.map(quote).join(';')).join('\r\n')}`
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
@@ -501,7 +501,7 @@ function OperatorApp({ userId }: { userId: string }) {
           {state.showSkaters && <div>
             <Users />
             <span>
-              <small>PARTICIPANTES ETAPA</small>
+              <small>PARTICIPANTES PARTE</small>
               <strong>{stageSkaters.length}</strong>
             </span>
           </div>}
@@ -521,7 +521,7 @@ function OperatorApp({ userId }: { userId: string }) {
           </div>}
           <div className="stage-stat">
             <span>
-              <small>ETAPA EN CURSO</small>
+              <small>PARTE EN CURSO</small>
               <strong><b>{state.currentStage}</b><em>DE {state.stageCount}</em></strong>
             </span>
             <i className="stage-progress">{Array.from({ length: state.stageCount }, (_, index) => <b className={index + 1 <= state.currentStage ? 'active' : ''} key={index} />)}</i>
@@ -595,22 +595,22 @@ function OperatorApp({ userId }: { userId: string }) {
             const isCurrent = stage === state.currentStage
             const canStartNext = stage === state.currentStage + 1 && currentStageCompleted && !state.activeBreakAfter
             const hasPending = isCurrent && (waiting.length > 0 || Boolean(active))
-            const label = completed && hasPending ? `REABRIR ETAPA ${stage}` : completed ? `ETAPA ${stage} FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ETAPA ${stage}` : `INICIAR ETAPA ${stage}`) : canStartNext ? `INICIAR ETAPA ${stage}` : `ETAPA ${stage} PENDIENTE`
+            const label = completed && hasPending ? `REABRIR ${stage}º PARTE` : completed ? `${stage}º PARTE FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ${stage}º PARTE` : `INICIAR ${stage}º PARTE`) : canStartNext ? `INICIAR ${stage}º PARTE` : `${stage}º PARTE PENDIENTE`
             const action = () => {
               if (canStartNext) {
-                if (window.confirm(`¿Iniciar etapa ${stage}?`)) startNextStage()
+                if (window.confirm(`¿Iniciar ${stage}º Parte?`)) startNextStage()
                 return
               }
               if (completed && hasPending) { start(); return }
               if (!isCurrent || completed) return
               if (state.started) {
-                if (waiting.length > 0 || active) window.alert(`Todavía quedan ${(waiting.length + (active ? 1 : 0))} pasadas en la etapa ${stage}. Finalizalas antes de cerrar la etapa.`)
-                else if (window.confirm(`¿Finalizar etapa ${stage}?`)) completeStage()
+                if (waiting.length > 0 || active) window.alert(`Todavía quedan ${(waiting.length + (active ? 1 : 0))} pasadas en la ${stage}º Parte. Finalizalas antes de cerrar la parte.`)
+                else if (window.confirm(`¿Finalizar ${stage}º Parte?`)) completeStage()
               } else if (checklistBlockers.length > 0) {
                 window.alert(`No se puede iniciar todavía:\n${checklistBlockers.map(item => `• ${item.label}: ${item.detail}`).join('\n')}`)
               } else if (stageSkaters.length === 0) {
-                window.alert(state.showSkaters ? 'No hay patinadoras habilitadas en esta etapa.' : 'No hay pasadas de clubes cargadas en esta etapa. Cargalas en Administrar → Pasadas.')
-              } else if (window.confirm(`¿Iniciar etapa ${stage}?`)) start()
+                window.alert(state.showSkaters ? 'No hay patinadoras habilitadas en esta parte.' : 'No hay pasadas de clubes cargadas en esta parte. Cargalas en Administrar → Pasadas.')
+              } else if (window.confirm(`¿Iniciar ${stage}º Parte?`)) start()
             }
             const breakActive = state.activeBreakAfter === stage
             const breakEnabled = completed && isCurrent
@@ -620,7 +620,7 @@ function OperatorApp({ userId }: { userId: string }) {
                   {completed ? <Check /> : state.started && isCurrent ? <Check /> : <PlayIcon />}
                   <span>
                     <strong>{label}</strong>
-                    <small>{completed ? 'Resultados guardados' : isCurrent && state.started ? 'Cierra esta pasada sin iniciar la siguiente' : canStartNext || isCurrent ? 'La música no comienza automáticamente' : 'Disponible al finalizar etapa anterior'}</small>
+                    <small>{completed ? 'Resultados guardados' : isCurrent && state.started ? 'Cierra esta pasada sin iniciar la siguiente' : canStartNext || isCurrent ? 'La música no comienza automáticamente' : 'Disponible al finalizar la parte anterior'}</small>
                   </span>
                 </button>
                 {stage < state.stageCount && (
@@ -628,7 +628,7 @@ function OperatorApp({ userId }: { userId: string }) {
                     <Clock3 />
                     <span>
                       <strong>{breakActive ? 'FINALIZAR RECESO' : `INICIAR RECESO · ${state.breakDurationMinutes} MIN`}</strong>
-                      <small>{breakActive ? `${breakCountdown} · Finaliza ${new Date(state.breakEndsAt!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : breakEnabled ? 'Comenzar cuenta regresiva del intervalo' : `Disponible al finalizar etapa ${stage}`}</small>
+                      <small>{breakActive ? `${breakCountdown} · Finaliza ${new Date(state.breakEndsAt!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : breakEnabled ? 'Comenzar cuenta regresiva del intervalo' : `Disponible al finalizar ${stage}º Parte`}</small>
                     </span>
                   </button>
                 )}
@@ -684,7 +684,7 @@ function OperatorApp({ userId }: { userId: string }) {
                 </div>
               </>
             ) : (
-              <div className="empty">{state.started ? 'Etapa sin pasada activa' : currentStageCompleted ? 'Etapa finalizada' : 'Iniciá la etapa para cargar el primer club'}</div>
+              <div className="empty">{state.started ? 'Parte sin pasada activa' : currentStageCompleted ? 'Parte finalizada' : 'Iniciá la parte para cargar el primer club'}</div>
             )}
           </section>
 
@@ -881,11 +881,11 @@ function SkaterModal({ skater, state, onClose, onStatus, onMove }: { skater: Ska
         </div>
         <div className="move-position">
           <label>
-            Etapa
+            Parte
             <select value={stage} onChange={(event) => setStage(Number(event.target.value) as StageNumber)}>
               {Array.from({ length: state.stageCount }, (_, index) => (
                 <option key={index + 1} value={index + 1}>
-                  Etapa {index + 1}
+                  {index + 1}º Parte
                 </option>
               ))}
             </select>
@@ -961,7 +961,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
     const clubSkaters = live.skaters.filter((skater) => skater.club === selectedClub)
     const clubTeachers = (live.teachers ?? []).filter((teacher) => teacher.club === selectedClub)
     const initials = selectedClub.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()
-    return <main className="public-view public-subpage"><button className="public-back" onClick={() => setSelectedClub(undefined)}><ChevronLeft /> Volver</button><header className="club-detail-head"><div className="club-detail-logo">{live.clubLogos?.[selectedClub] ? <img src={live.clubLogos[selectedClub]} alt={`Escudo de ${selectedClub}`} /> : initials}</div><div><small>CLUB INVITADO</small><h1>{selectedClub}</h1></div></header><section className="club-teachers"><small>PROFE{clubTeachers.length > 1 ? 'S' : ''}</small><strong>{clubTeachers.length ? clubTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></section><h2 className="public-list-title">Orden de pasadas</h2><div className="club-skater-list">{clubSkaters.map((skater) => { const stageIds = live.stageOrders[skater.stageNumber] ?? live.skaters.filter((item) => item.stageNumber === skater.stageNumber).map((item) => item.id); const position = stageIds.indexOf(skater.id) + 1; return <article key={skater.id}><div><strong>{live.showSkaters ? fullName(skater as Skater) : skater.track}</strong>{live.showSkaters && <small>{skater.track}</small>}</div><span>Etapa {skater.stageNumber}<strong>Posición {position}</strong></span></article> })}</div></main>
+    return <main className="public-view public-subpage"><button className="public-back" onClick={() => setSelectedClub(undefined)}><ChevronLeft /> Volver</button><header className="club-detail-head"><div className="club-detail-logo">{live.clubLogos?.[selectedClub] ? <img src={live.clubLogos[selectedClub]} alt={`Escudo de ${selectedClub}`} /> : initials}</div><div><small>CLUB INVITADO</small><h1>{selectedClub}</h1></div></header><section className="club-teachers"><small>PROFE{clubTeachers.length > 1 ? 'S' : ''}</small><strong>{clubTeachers.length ? clubTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></section><h2 className="public-list-title">Orden de pasadas</h2><div className="club-skater-list">{clubSkaters.map((skater) => { const stageIds = live.stageOrders[skater.stageNumber] ?? live.skaters.filter((item) => item.stageNumber === skater.stageNumber).map((item) => item.id); const position = stageIds.indexOf(skater.id) + 1; return <article key={skater.id}><div><strong>{live.showSkaters ? fullName(skater as Skater) : skater.track}</strong>{live.showSkaters && <small>{skater.track}</small>}</div><span>{skater.stageNumber}º Parte<strong>Posición {position}</strong></span></article> })}</div></main>
   }
   if (buffetOpen) return <main className={`public-view public-subpage${live.useFrameOnBuffet && live.publicFrame ? ' public-framed' : ''}`} style={live.useFrameOnBuffet ? frameStyle : undefined}><button className="public-back" onClick={() => setBuffetOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head"><ShoppingBasket /><div><small>PRECIOS DEL EVENTO</small><h1>Bufet</h1></div></header><div className="public-buffet-list">{(live.buffetItems ?? []).map((item) => <article key={item.id}><strong>{item.name}</strong><b>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</b></article>)}{!live.buffetItems?.length && <p>El menú todavía no fue cargado.</p>}</div></main>
   if (raffleOpen) return <main className={`public-view public-subpage${live.useFrameOnRaffle && live.publicFrame ? ' public-framed' : ''}`} style={live.useFrameOnRaffle ? frameStyle : undefined}><button className="public-back" onClick={() => setRaffleOpen(false)}><ChevronLeft /> Volver</button><header className="buffet-head raffle-head"><Trophy /><div><small>SORTEO DEL EVENTO</small><h1>Premios</h1></div></header><div className="public-raffle-prices">{(live.rafflePrices ?? []).map(item => <article key={item.id}><strong>{item.quantity} {item.quantity === 1 ? 'número' : 'números'}</strong><b>{item.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</b></article>)}{!live.rafflePrices?.length && <p>Valores a confirmar.</p>}</div><div className="public-raffle-list">{[...(live.rafflePrizes ?? [])].sort((a, b) => a.order - b.order).map(prize => <article key={prize.id}><b>{prize.order}°</b><strong>{prize.name}</strong>{prize.winningNumber ? <span className="winner"><small>NÚMERO GANADOR</small><em>{prize.winningNumber}</em></span> : <span>Pendiente de sorteo</span>}</article>)}{!live.rafflePrizes?.length && <p>Los premios todavía no fueron cargados.</p>}</div></main>
@@ -976,12 +976,12 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
       <h1>{live.name}</h1>
       <div className="public-organizer">
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
-        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · Etapa {live.currentStage} de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' })}` : ''}</span></div>
+        <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · {live.currentStage}º Parte de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' })}` : ''}</span></div>
       </div>
       {firstStageStarting || nextStageStarting ? (
         <div className="public-starting">
-          <small>{firstStageStarting ? 'TODO LISTO' : `PRÓXIMA: ETAPA ${live.currentStage + 1}`}</small>
-          <strong>{firstStageStarting ? 'El show está por comenzar' : 'La próxima etapa está por comenzar'}</strong>
+          <small>{firstStageStarting ? 'TODO LISTO' : `PRÓXIMA: ${live.currentStage + 1}º PARTE`}</small>
+          <strong>{firstStageStarting ? 'El show está por comenzar' : 'La próxima parte está por comenzar'}</strong>
           <span>En instantes comenzamos.</span>
         </div>
       ) : live.activeBreakAfter ? (
@@ -989,7 +989,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
           <small>RECESO EN CURSO</small>
           <strong>{breakCountdown}</strong>
           <span>Finaliza a las {new Date(live.breakEndsAt!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-          <em>A continuación: Etapa {live.activeBreakAfter + 1}</em>
+          <em>A continuación: {live.activeBreakAfter + 1}º Parte</em>
         </div>
       ) : !live.actualStartedAt ? (
         <>
@@ -1005,7 +1005,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
               const ids = live.stageOrders[stage] ?? live.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)
               return (
                 <section key={stage}>
-                  <h3>Etapa {stage}</h3>
+                  <h3>{stage}º Parte</h3>
                   {ids.map((id, order) => {
                     const skater = byId.get(id)
                     return skater ? (

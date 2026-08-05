@@ -6,7 +6,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(v
 export function validateFestivalData(value: unknown): Partial<FestivalState> {
   if (!isRecord(value)) throw new Error('El archivo no contiene un evento válido.')
   if (value.skaters !== undefined && !Array.isArray(value.skaters)) throw new Error('La lista de patinadoras es inválida.')
-  if (value.stageCount !== undefined && ![1, 2, 3].includes(Number(value.stageCount))) throw new Error('La cantidad de etapas debe ser entre 1 y 3.')
+  if (value.stageCount !== undefined && ![1, 2, 3].includes(Number(value.stageCount))) throw new Error('La cantidad de partes debe ser entre 1 y 3.')
   return value as Partial<FestivalState>
 }
 
@@ -23,5 +23,5 @@ export function validateCsvRow(row: string[], line: number) {
   const number = Number(row[0])
   const stageNumber = Number(row[5])
   if (!Number.isFinite(number) || number <= 0) throw new Error(`Fila ${line}: número inválido.`)
-  if (![1, 2, 3].includes(stageNumber)) throw new Error(`Fila ${line}: etapa inválida.`)
+  if (![1, 2, 3].includes(stageNumber)) throw new Error(`Fila ${line}: parte inválida.`)
 }

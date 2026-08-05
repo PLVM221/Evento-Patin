@@ -266,7 +266,7 @@ export function useFestival(userId = 'public') {
       ?? current.skaters.find(skater => enabled(skater) && skater.stageNumber === current.currentStage && (skater.status === 'PENDING' || skater.status === 'READY' || skater.status === 'POSTPONED'))
     if (!active) return current
     return { ...current, started: true, actualStartedAt: current.actualStartedAt ?? new Date().toISOString(), completedStages: current.completedStages.filter(stage => stage !== current.currentStage), activeId: active.id, skaters: current.skaters.map(skater => skater.id === active.id ? { ...skater, status: 'SKATING' } : skater) }
-  }, 'Iniciar evento', 'Comenzó la reproducción de la etapa actual')
+  }, 'Iniciar evento', 'Comenzó la reproducción de la parte actual')
 
   const finishAndNext = () => update(current => {
     if (!current.started) return current
@@ -314,7 +314,7 @@ export function useFestival(userId = 'public') {
     activeId: current.skaters.find(skater => isEntryEnabled(skater, current.showSkaters) && skater.stageNumber === 1)?.id,
     elapsed: 0,
     skaters: current.skaters.map(skater => ({ ...skater, stageResults: {}, status: skater.id === current.skaters.find(item => item.stageNumber === 1)?.id ? 'READY' : 'PENDING' })),
-  }), 'Reiniciar festival', 'Se reiniciaron etapas y resultados')
+  }), 'Reiniciar festival', 'Se reiniciaron partes y resultados')
 
   const completeStage = () => update(current => {
     const finishingStage = current.currentStage
@@ -333,7 +333,7 @@ export function useFestival(userId = 'public') {
         stageResults: skater.stageNumber === finishingStage ? { ...skater.stageResults, [finishingStage]: skater.status } : skater.stageResults,
       })),
     }
-  }, 'Finalizar etapa', 'Se guardaron los resultados de la etapa actual')
+  }, 'Finalizar parte', 'Se guardaron los resultados de la parte actual')
 
   const startNextStage = () => update(current => {
     if (current.currentStage >= current.stageCount || !current.completedStages.includes(current.currentStage)) return current

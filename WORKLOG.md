@@ -4,6 +4,8 @@
 
 | Hora | Cambio |
 |------|--------|
+| 19:15 | refactor(textos): Etapa se reemplaza por Parte en operador, administracion, QR, mensajes y CSV |
+| 19:15 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 18:47 | style(header): nombre del evento centrado y destacado en tarjeta responsive |
 | 18:47 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 10:17 | fix(tema): switch Luna/Sol corrige superposición con cápsula y perilla circular tipo red social |
