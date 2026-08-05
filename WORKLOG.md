@@ -4,6 +4,8 @@
 
 | Hora | Cambio |
 |------|--------|
+| 18:47 | style(header): nombre del evento centrado y destacado en tarjeta responsive |
+| 18:47 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 10:17 | fix(tema): switch Luna/Sol corrige superposición con cápsula y perilla circular tipo red social |
 | 10:08 | feat(audio): mejora inteligente opcional suma ecualización, compresión y limitador Web Audio con transición sin chasquidos |
 | 09:42 | fix(audio): reproductor conserva fuente local ante sincronizaciones, queda aislado de re-renders y evita que hidratación asíncrona pise cambios |
