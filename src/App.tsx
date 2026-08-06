@@ -12,7 +12,7 @@ import { useFestival } from './hooks/useFestival'
 import { audioPreflight, estimateFinish } from './lib/operations.mjs'
 import { supabase } from './lib/supabase'
 import { createId } from './lib/id'
-import { formatTime, fullName, isEntryEnabled, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
+import { formatTime, fullName, isEntryEnabled, isEntryVisibleOnPublic, type FestivalState, type Skater, type SkaterStatus, type StageNumber, type Teacher } from './models'
 
 function useCountdown(eventDate: string, startTime: string) {
   const [now, setNow] = useState(Date.now())
@@ -246,10 +246,11 @@ function OperatorApp({ userId }: { userId: string }) {
       stageOrders: Object.fromEntries(
         Array.from({ length: state.stageCount }, (_, index) => {
           const stage = (index + 1) as StageNumber
-          return [stage, state.stageOrders[stage] ?? state.skaters.filter((skater) => skater.stageNumber === stage).map((skater) => skater.id)]
+          const publicIds = new Set(state.skaters.filter((skater) => skater.stageNumber === stage && isEntryVisibleOnPublic(skater)).map((skater) => skater.id))
+          return [stage, (state.stageOrders[stage] ?? [...publicIds]).filter((id) => publicIds.has(id))]
         }),
       ),
-      skaters: state.skaters.filter((skater) => skater.status !== 'ABSENT' && isEntryEnabled(skater, state.showSkaters)).map(({ id, entryType, number, firstName, lastName, club, track, status, stageNumber }) => ({
+      skaters: state.skaters.filter((skater) => skater.status !== 'ABSENT' && isEntryEnabled(skater, state.showSkaters) && isEntryVisibleOnPublic(skater)).map(({ id, entryType, number, firstName, lastName, club, track, status, stageNumber }) => ({
         id,
         entryType,
         number,

@@ -4,6 +4,9 @@
 
 | Hora | Cambio |
 |------|--------|
+| 21:36 | feat(qr): cada pasada permite ocultarse de listados y reproduccion publica sin afectar operador |
+| 21:36 | db(migration): snapshot publico filtra pasadas marcadas como solo operador |
+| 21:36 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 19:15 | refactor(textos): Etapa se reemplaza por Parte en operador, administracion, QR, mensajes y CSV |
 | 19:15 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 18:47 | style(header): nombre del evento centrado y destacado en tarjeta responsive |

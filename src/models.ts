@@ -52,6 +52,7 @@ export interface Skater {
   heat: string
   status: SkaterStatus
   stageNumber: StageNumber
+  showOnPublic?: boolean
   stageResults?: Partial<Record<StageNumber, SkaterStatus>>
   notes?: string
   /** Runtime-only URL reconstructed from the durable IndexedDB audio blob. */
@@ -120,6 +121,8 @@ export const fullName = (skater: Skater) => `${skater.firstName} ${skater.lastNa
 
 export const isEntryEnabled = (skater: Pick<Skater, 'entryType'>, showSkaters: boolean) =>
   skater.entryType === 'general' || (showSkaters ? skater.entryType !== 'club' : skater.entryType === 'club')
+
+export const isEntryVisibleOnPublic = (skater: Pick<Skater, 'showOnPublic'>) => skater.showOnPublic !== false
 
 export const formatTime = (seconds: number) => {
   const value = Math.max(0, Math.floor(seconds))

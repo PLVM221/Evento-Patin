@@ -57,6 +57,7 @@ const normalize = (parsed: Partial<FestivalState> & { stage?: string; firstStage
         ...skater,
         heat: parsed.useHeats ? skater.heat : 'Tanda 1',
         stageNumber: sanitizeStage(skater.stageNumber, parsed.stageCount ?? 2),
+        showOnPublic: skater.showOnPublic ?? true,
         status: sanitizeStatus(skater.status),
         stageResults: skater.stageResults ?? (skater.firstStageStatus ? { 1: skater.firstStageStatus } : {}),
       })),
