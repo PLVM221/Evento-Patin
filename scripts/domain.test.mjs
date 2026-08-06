@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { audioPreflight, estimateFinish } from '../src/lib/operations.mjs'
+import { audioPreflight, estimateFinish, rebaseRevision, shouldApplyRemoteRevision } from '../src/lib/operations.mjs'
 
 const state = {
   currentStage: 1,
@@ -31,4 +31,22 @@ test('preflight revisa el modo activo y siempre incluye audios generales', () =>
     ],
   }
   assert.deepEqual(audioPreflight(entries), { ready: 1, total: 2, complete: false })
+})
+
+test('autosave rebasa cambios agrupados sin saltar revisiones remotas', () => {
+  let confirmed = 7
+  const localBurst = [{ revision: 8, value: 'a' }, { revision: 11, value: 'd' }]
+  const persisted = localBurst.map(candidate => {
+    const rebased = rebaseRevision(candidate, confirmed)
+    confirmed = rebased.revision
+    return rebased
+  })
+  assert.deepEqual(persisted.map(item => item.revision), [8, 9])
+  assert.equal(persisted[1].value, 'd')
+})
+
+test('sincronizacion remota no pisa estado local mas nuevo', () => {
+  assert.equal(shouldApplyRemoteRevision(12, 11), false)
+  assert.equal(shouldApplyRemoteRevision(12, 12), true)
+  assert.equal(shouldApplyRemoteRevision(12, 13), true)
 })

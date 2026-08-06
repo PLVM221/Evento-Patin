@@ -10,3 +10,11 @@ export const audioPreflight = state => {
   const ready = required.filter(item => item.audioReady).length
   return { ready, total: required.length, complete: ready === required.length }
 }
+
+export const rebaseRevision = (state, confirmedRevision) => ({
+  ...state,
+  revision: Math.max(0, Number(confirmedRevision) || 0) + 1,
+})
+
+export const shouldApplyRemoteRevision = (localRevision, remoteRevision) =>
+  Number(remoteRevision) >= Number(localRevision)

@@ -5,6 +5,7 @@ import { canTransitionStatus, isEntryEnabled, type FestivalState, type SavedEven
 import { loadTrack } from '../lib/audioStore'
 import { sanitizeStage, sanitizeStatus, validateFestivalData } from '../lib/festivalValidation'
 import { createId } from '../lib/id'
+import { rebaseRevision, shouldApplyRemoteRevision } from '../lib/operations.mjs'
 
 const STORAGE_KEY = 'pista-festival-state-v1'
 const OFFLINE_ENABLED_KEY = 'pista-offline-enabled-v1'
@@ -86,6 +87,9 @@ export function useFestival(userId = 'public') {
   const applyingRemote = useRef(false)
   const pendingSave = useRef<FestivalState | null>(null)
   const saving = useRef(false)
+  const confirmedRevision = useRef<number | null>(null)
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   const loadSavedEvents = useCallback(async () => {
     if (readOnly) return
@@ -106,11 +110,14 @@ export function useFestival(userId = 'public') {
     const flush = async () => {
       saving.current = true
       setDatabaseStatus('saving')
+      let lastLocalRevision: number | undefined
+      let lastSavedRevision: number | undefined
       while (pendingSave.current) {
         const candidate = pendingSave.current
         pendingSave.current = null
-        const durable = withoutRuntimeAudio(candidate)
-        const { error } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: durable, p_expected_revision: Math.max(0, durable.revision - 1), p_new_revision: durable.revision })
+        const expectedRevision = confirmedRevision.current ?? Math.max(0, candidate.revision - 1)
+        const durable = withoutRuntimeAudio(rebaseRevision(candidate, expectedRevision))
+        const { error } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: durable, p_expected_revision: expectedRevision, p_new_revision: durable.revision })
         if (error) {
           pendingSave.current = candidate
           if (offlineEnabled) localStorage.setItem(OFFLINE_DIRTY_KEY, 'true')
@@ -118,8 +125,14 @@ export function useFestival(userId = 'public') {
           saving.current = false
           return
         }
+        confirmedRevision.current = durable.revision
+        lastLocalRevision = candidate.revision
+        lastSavedRevision = durable.revision
       }
       saving.current = false
+      if (lastLocalRevision !== undefined && lastSavedRevision !== undefined) {
+        setState(current => current.revision === lastLocalRevision ? { ...current, revision: lastSavedRevision } : current)
+      }
       localStorage.removeItem(OFFLINE_DIRTY_KEY)
       localStorage.removeItem(OFFLINE_BASE_REVISION_KEY)
       setDatabaseStatus('saved')
@@ -152,27 +165,38 @@ export function useFestival(userId = 'public') {
           const candidate = withoutRuntimeAudio(normalize(validateFestivalData(JSON.parse(local))))
           const expected = Number(localStorage.getItem(OFFLINE_BASE_REVISION_KEY) ?? Math.max(0, candidate.revision - 1))
           const { error: syncError } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: candidate, p_expected_revision: expected, p_new_revision: candidate.revision })
-          if (!syncError) { localStorage.removeItem(OFFLINE_DIRTY_KEY); localStorage.removeItem(OFFLINE_BASE_REVISION_KEY); pendingSave.current = null }
+          if (!syncError) { confirmedRevision.current = candidate.revision; localStorage.removeItem(OFFLINE_DIRTY_KEY); localStorage.removeItem(OFFLINE_BASE_REVISION_KEY); pendingSave.current = null }
           else if (syncError.code === '40001') { setDatabaseStatus('conflict'); return }
         }
       }
-      const { data, error } = await supabase.from('festival_state').select('data').eq('id', stateId).maybeSingle()
+      const { data, error } = await supabase.from('festival_state').select('data,revision').eq('id', stateId).maybeSingle()
       if (!active) return
       if (!error && data?.data && (readOnly || (!saving.current && !pendingSave.current))) {
+        const remoteRevision = Number(data.revision) || Number((data.data as Partial<FestivalState>).revision) || 0
+        confirmedRevision.current = remoteRevision
+        if (!readOnly && !shouldApplyRemoteRevision(stateRef.current.revision, remoteRevision)) {
+          setDatabaseStatus('conflict')
+          return
+        }
         applyingRemote.current = true
-        setState(current => preserveRuntimeAudio(normalize(data.data as Partial<FestivalState>), current))
-      } else if (!error && !readOnly) {
-        await supabase.from('festival_state').upsert({ id: stateId, owner_id: userId, data: withoutRuntimeAudio(initialState.current), revision: initialState.current.revision, updated_at: new Date().toISOString() })
+        setState(current => preserveRuntimeAudio(normalize({ ...(data.data as Partial<FestivalState>), revision: remoteRevision }), current))
+      } else if (!error && !readOnly && !data?.data) {
+        const { error: createError } = await supabase.from('festival_state').upsert({ id: stateId, owner_id: userId, data: withoutRuntimeAudio(initialState.current), revision: initialState.current.revision, updated_at: new Date().toISOString() })
+        if (!createError) confirmedRevision.current = initialState.current.revision
       }
-      setDatabaseStatus(!navigator.onLine && offlineEnabled ? 'offline' : error ? 'error' : 'saved')
+      if (!saving.current && !pendingSave.current) setDatabaseStatus(!navigator.onLine && offlineEnabled ? 'offline' : error ? 'error' : 'saved')
     }
     void load()
     void loadSavedEvents()
     const channel = supabase.channel(`festival-state-${userId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'festival_state', filter: `id=eq.${stateId}` }, payload => {
-      const row = payload.new as { data?: Partial<FestivalState> }
-      if (row.data && (readOnly || (!saving.current && !pendingSave.current))) {
+      const row = payload.new as { data?: Partial<FestivalState>; revision?: number }
+      const remoteRevision = Number(row.revision) || Number(row.data?.revision) || 0
+      if (remoteRevision <= (confirmedRevision.current ?? -1)) return
+      if (!readOnly && (saving.current || pendingSave.current)) return
+      confirmedRevision.current = remoteRevision
+      if (row.data && (readOnly || (!saving.current && !pendingSave.current)) && shouldApplyRemoteRevision(stateRef.current.revision, remoteRevision)) {
         applyingRemote.current = true
-        setState(current => preserveRuntimeAudio(normalize(row.data!), current))
+        setState(current => preserveRuntimeAudio(normalize({ ...row.data!, revision: remoteRevision }), current))
       }
     }).subscribe()
     const resume = () => { if (document.visibilityState === 'visible') void load() }
@@ -243,9 +267,11 @@ export function useFestival(userId = 'public') {
     const { data, error: readError } = await supabase.from('festival_state').select('revision').eq('id', stateId).maybeSingle()
     if (readError) { setDatabaseStatus('error'); return 'error' }
     const remoteRevision = Number(data?.revision) || 0
-    const next = { ...state, revision: remoteRevision + 1 }
+    confirmedRevision.current = remoteRevision
+    const next = rebaseRevision(state, remoteRevision)
     const { error } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: withoutRuntimeAudio(next), p_expected_revision: remoteRevision, p_new_revision: next.revision })
     if (error) { setDatabaseStatus(error.code === '40001' ? 'conflict' : 'error'); return 'error' }
+    confirmedRevision.current = next.revision
     setState(next)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutRuntimeAudio(next)))
     localStorage.removeItem(OFFLINE_DIRTY_KEY)
@@ -437,12 +463,15 @@ export function useFestival(userId = 'public') {
     const { data, error } = await supabase.from('festival_state').select('data,revision').eq('id', stateId).maybeSingle()
     if (error) { setDatabaseStatus('error'); return }
     if (choice === 'remote' && data?.data) {
+      confirmedRevision.current = Number(data.revision) || 0
       applyingRemote.current = true
-      setState(normalize(data.data as Partial<FestivalState>))
+      setState(normalize({ ...(data.data as Partial<FestivalState>), revision: confirmedRevision.current }))
     } else {
-      const next = { ...state, revision: Math.max(state.revision, Number(data?.revision) || 0) + 1 }
-      const { error: saveError } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: withoutRuntimeAudio(next), p_expected_revision: Number(data?.revision) || 0, p_new_revision: next.revision })
+      const remoteRevision = Number(data?.revision) || 0
+      const next = rebaseRevision(state, remoteRevision)
+      const { error: saveError } = await supabase.rpc('save_festival_state', { p_id: stateId, p_data: withoutRuntimeAudio(next), p_expected_revision: remoteRevision, p_new_revision: next.revision })
       if (saveError) { setDatabaseStatus('error'); return }
+      confirmedRevision.current = next.revision
       setState(next)
     }
     localStorage.removeItem(OFFLINE_DIRTY_KEY)
@@ -464,6 +493,7 @@ export function useFestival(userId = 'public') {
     }
     setDatabaseStatus('saving')
     const { error } = await supabase.from('festival_state').upsert({ id: stateId, owner_id: userId, data: withoutRuntimeAudio(cleared), revision: cleared.revision, updated_at: new Date().toISOString() })
+    if (!error) confirmedRevision.current = cleared.revision
     setDatabaseStatus(error ? 'error' : 'saved')
   }
 

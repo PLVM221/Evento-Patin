@@ -4,6 +4,9 @@
 
 | Hora | Cambio |
 |------|--------|
+| 22:16 | fix(sync): autosave agrupa cambios rapidos sin saltar revisiones remotas |
+| 22:16 | fix(sync): foco y realtime dejan de restaurar estados viejos sobre cambios locales |
+| 22:16 | test: `npm run lint`, 5 pruebas, `npm run build` y `git diff --check` OK |
 | 21:52 | style(qr): titulo del evento centrado en tarjeta translucida con corte de lineas equilibrado |
 | 21:52 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 21:36 | feat(qr): cada pasada permite ocultarse de listados y reproduccion publica sin afectar operador |
