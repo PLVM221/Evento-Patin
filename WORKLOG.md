@@ -4,6 +4,8 @@
 
 | Hora | Cambio |
 |------|--------|
+| 21:52 | style(qr): titulo del evento centrado en tarjeta translucida con corte de lineas equilibrado |
+| 21:52 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 21:36 | feat(qr): cada pasada permite ocultarse de listados y reproduccion publica sin afectar operador |
 | 21:36 | db(migration): snapshot publico filtra pasadas marcadas como solo operador |
 | 21:36 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |

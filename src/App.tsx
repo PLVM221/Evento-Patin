@@ -974,7 +974,7 @@ function PublicView({ state, connected }: { state: PublicState; connected: boole
       {live.announcement && <div className={`public-announcement ${live.announcementTone}`}><Radio /><span><small>AVISO DEL EVENTO</small><strong>{live.announcement}</strong></span></div>}
       {live.showBuffet && <button className="public-buffet-button" onClick={() => setBuffetOpen(true)}><ShoppingBasket /> Ver precios del bufet</button>}
       {live.showRaffle && <button className="public-raffle-button" onClick={() => setRaffleOpen(true)}><Trophy /> Ver sorteo</button>}
-      <h1>{live.name}</h1>
+      <div className="public-event-heading"><span>EVENTO EN CURSO</span><h1>{live.name}</h1></div>
       <div className="public-organizer">
         <div className="public-organizer-logo">{live.organizerLogo ? <img src={live.organizerLogo} alt={`Escudo de ${live.organizer}`} /> : live.organizer.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</div>
         <div><small>CLUB ORGANIZADOR</small><strong>{live.organizer}</strong><span>{live.location} · {live.currentStage}º Parte de {live.stageCount}{live.actualStartedAt ? ` · Inicio real ${new Date(live.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' })}` : ''}</span></div>
