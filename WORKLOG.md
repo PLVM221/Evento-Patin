@@ -1,5 +1,13 @@
 # WORKLOG
 
+### 2026-08-07
+
+| Hora | Cambio |
+|------|--------|
+| 18:50 | fix(ui): panel oscuro corrige contraste del evento, horarios y estados deshabilitados |
+| 18:50 | style(clima): emojis reemplazados por iconos vectoriales consistentes |
+| 18:50 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+
 ### 2026-08-05
 
 | Hora | Cambio |

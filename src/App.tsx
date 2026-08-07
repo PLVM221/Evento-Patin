@@ -172,7 +172,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const finished = stageSkaters.filter((skater) => skater.status === 'FINISHED').length
   const visible = useMemo(() => stageSkaters.filter((skater) => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [stageSkaters, query])
   const suggestions = query.trim().length ? visible.slice(0, 6) : []
-  const stageName = `${state.currentStage}º Parte de ${state.stageCount}`
+  const stageName = `${state.currentStage}.ª Parte de ${state.stageCount}`
   const currentStageCompleted = state.completedStages.includes(state.currentStage)
   const countdown = useCountdown(state.eventDate, state.startTime)
   const breakCountdown = useRemainingUntil(state.breakEndsAt)
@@ -585,7 +585,7 @@ function OperatorApp({ userId }: { userId: string }) {
             <small>HORAS · MINUTOS · SEGUNDOS</small>
           </div>
         )}
-        {state.actualStartedAt && <div className="operator-started">TORNEO INICIADO · {new Date(state.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>}
+        {state.actualStartedAt && <div className="operator-started">INICIO REAL DEL TORNEO · {new Date(state.actualStartedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' })} hs</div>}
 
         {!state.actualStartedAt && state.completedStages.length === 0 && <section className={`prestart-checklist${checklistIssues.length ? '' : ' ready'}`}><header><div><small>CONTROL PREVIO</small><strong>{checklistIssues.length ? `${checklistIssues.length} puntos para revisar` : 'Todo listo para comenzar'}</strong></div><span>{checklist.length - checklistIssues.length}/{checklist.length}</span></header><div>{checklist.map(item => <article className={item.ok ? 'ok' : item.blocking ? 'blocked' : 'warning'} key={item.label}>{item.ok ? <CheckCircle2 /> : <AlertTriangle />}<span><strong>{item.label}</strong><small>{item.detail}</small></span></article>)}</div></section>}
 
@@ -596,7 +596,7 @@ function OperatorApp({ userId }: { userId: string }) {
             const isCurrent = stage === state.currentStage
             const canStartNext = stage === state.currentStage + 1 && currentStageCompleted && !state.activeBreakAfter
             const hasPending = isCurrent && (waiting.length > 0 || Boolean(active))
-            const label = completed && hasPending ? `REABRIR ${stage}º PARTE` : completed ? `${stage}º PARTE FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ${stage}º PARTE` : `INICIAR ${stage}º PARTE`) : canStartNext ? `INICIAR ${stage}º PARTE` : `${stage}º PARTE PENDIENTE`
+            const label = completed && hasPending ? `REABRIR ${stage}.ª PARTE` : completed ? `${stage}.ª PARTE FINALIZADA` : isCurrent ? (state.started ? `FINALIZAR ${stage}.ª PARTE` : `INICIAR ${stage}.ª PARTE`) : canStartNext ? `INICIAR ${stage}.ª PARTE` : `${stage}.ª PARTE PENDIENTE`
             const action = () => {
               if (canStartNext) {
                 if (window.confirm(`¿Iniciar ${stage}º Parte?`)) startNextStage()

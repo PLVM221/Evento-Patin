@@ -56,6 +56,11 @@
 .dark .admin-tabs button.selected { color: #b8b0ff; background: #2a2548; }
 .dark .modal { color: #e9edf7; background: #171d2a; }
 .dark .weather-card { color: #e9edf7; background: #171d2a; border-color: #30394d; }
+.dark .event-name { background: linear-gradient(135deg, #242b3b, #211f38 55%, #2a2232); border-color: #3c4260 !important; box-shadow: 0 7px 20px #0004; }
+.dark .event-name > div:last-child strong { color: #f3f5fb; }
+.dark .event-name > div:last-child span { color: #aaa2ff; }
+.dark .event-name > div:last-child small { color: #a6afc2; }
+.dark .stage-control:disabled, .dark .break-control:disabled { color: #858da0; background: #202736; border-color: #343d50; opacity: 1; }
 .dark .audience-details strong, .dark .audience-total em, .dark .clubs-heading p, .dark .next-person p, .dark .next-person span, .dark .waiting-row small { color: #9da8bc; }
 
 .app-shell > main > .prestart-checklist { order: 5; }
