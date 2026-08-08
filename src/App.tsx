@@ -654,7 +654,7 @@ function OperatorApp({ userId }: { userId: string }) {
           </div>
         )}
 
-        <div className="live-grid">
+        <div className={`live-grid${state.playAudio ? '' : ' without-audio'}`}>
           <section className="now-card card">
             <div className="card-label">
               <span>

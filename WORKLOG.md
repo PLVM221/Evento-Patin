@@ -4,6 +4,8 @@
 
 | Hora | Cambio |
 |------|--------|
+| 09:50 | fix(operador): modo sin audio evita que tarjeta en pista se estire y deje un hueco vacío |
+| 09:50 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 09:42 | feat(audio): evento permite desactivar reproducción y oculta reproductor, control previo y administración de canciones |
 | 09:42 | feat(operador): seguimiento lateral muestra pasadas finalizadas con la más reciente primero |
 | 09:42 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
