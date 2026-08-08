@@ -4,6 +4,8 @@
 
 | Hora | Cambio |
 |------|--------|
+| 02:18 | style(qr): listado de pasadas amplía filas, nombres, detalles y numeración en escritorio y celular |
+| 02:18 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 01:33 | fix(audio): cargas consecutivas confirman IndexedDB y conservan asociaciones aunque falle metadata o espacio local |
 | 01:33 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 
