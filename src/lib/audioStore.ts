@@ -10,15 +10,21 @@ const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
   request.onerror = () => reject(request.error)
 })
 
+const waitForTransaction = (transaction: IDBTransaction) => new Promise<void>((resolve, reject) => {
+  transaction.oncomplete = () => resolve()
+  transaction.onabort = () => reject(transaction.error ?? new Error('La operación de audio fue cancelada.'))
+  transaction.onerror = () => reject(transaction.error ?? new Error('No se pudo guardar el audio.'))
+})
+
 export async function saveTrack(skaterId: string, file: File) {
   const db = await openDb()
-  await new Promise<void>((resolve, reject) => {
+  try {
     const transaction = db.transaction(STORE, 'readwrite')
     transaction.objectStore(STORE).put(file, skaterId)
-    transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error)
-  })
-  db.close()
+    await waitForTransaction(transaction)
+  } finally {
+    db.close()
+  }
 }
 
 export async function loadTrack(skaterId: string): Promise<Blob | undefined> {
@@ -34,7 +40,11 @@ export async function loadTrack(skaterId: string): Promise<Blob | undefined> {
 
 export async function removeTrack(skaterId: string) {
   const db = await openDb()
-  const transaction = db.transaction(STORE, 'readwrite')
-  transaction.objectStore(STORE).delete(skaterId)
-  db.close()
+  try {
+    const transaction = db.transaction(STORE, 'readwrite')
+    transaction.objectStore(STORE).delete(skaterId)
+    await waitForTransaction(transaction)
+  } finally {
+    db.close()
+  }
 }

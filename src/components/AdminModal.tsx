@@ -295,10 +295,18 @@ function AudioAdmin({ skaters, showSkaters, onUpdate }: { skaters: Skater[]; sho
   const select = async (skater: Skater, file?: File) => {
     if (!file) return
     if (!file.type.startsWith('audio/')) { window.alert('Seleccioná un archivo de audio válido.'); return }
-    await saveTrack(skater.id, file)
-    const probe = new Audio(URL.createObjectURL(file))
-    probe.onloadedmetadata = () => onUpdate(skater.id, { audioName: file.name, audioUrl: probe.src, audioReady: true, duration: Math.round(probe.duration) || skater.duration })
-    probe.onerror = () => window.alert(`No se pudo leer ${file.name}. Probá convertirlo a MP3, WAV u OGG.`)
+    try {
+      await navigator.storage?.persist?.()
+      await saveTrack(skater.id, file)
+      const audioUrl = URL.createObjectURL(file)
+      onUpdate(skater.id, { audioName: file.name, audioUrl, audioReady: true })
+      const probe = new Audio(audioUrl)
+      probe.onloadedmetadata = () => onUpdate(skater.id, { duration: Math.round(probe.duration) || skater.duration })
+      probe.onerror = () => window.alert(`${file.name} quedó guardado, pero el navegador no pudo leer su duración. Probá convertirlo a MP3, WAV u OGG.`)
+    } catch (error) {
+      const quota = error instanceof DOMException && error.name === 'QuotaExceededError'
+      window.alert(quota ? 'No queda espacio local para otro audio. Liberá espacio del navegador y volvé a intentar.' : `No se pudo guardar ${file.name} en este equipo.`)
+    }
   }
   const remove = async (skater: Skater) => { await removeTrack(skater.id); if (skater.audioUrl) URL.revokeObjectURL(skater.audioUrl); onUpdate(skater.id, { audioName: undefined, audioUrl: undefined, audioReady: false }) }
   return <div><div className="admin-intro"><h3>Canciones</h3><p>Los archivos se guardan de forma persistente en este equipo y nunca se suben a Internet.</p></div><div className="audio-list">{skaters.map(skater => <div key={skater.id}><Music2 /><span><strong>{showSkaters ? fullName(skater) : `${skater.club} · ${skater.track}`}</strong><small>{skater.audioReady ? `✓ ${skater.audioName}` : skater.audioName ? `⚠ No disponible · ${skater.audioName}` : 'Sin archivo asociado'}</small></span><label className="file-btn">Seleccionar<input type="file" accept="audio/*" onChange={event => void select(skater, event.target.files?.[0])} /></label>{skater.audioUrl && <button onClick={() => void new Audio(skater.audioUrl).play()}>Escuchar</button>}{skater.audioName && <button onClick={() => void remove(skater)}>Quitar</button>}</div>)}</div></div>

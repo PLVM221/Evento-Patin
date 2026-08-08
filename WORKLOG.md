@@ -1,5 +1,12 @@
 # WORKLOG
 
+### 2026-08-08
+
+| Hora | Cambio |
+|------|--------|
+| 01:33 | fix(audio): cargas consecutivas confirman IndexedDB y conservan asociaciones aunque falle metadata o espacio local |
+| 01:33 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
+
 ### 2026-08-07
 
 | Hora | Cambio |
