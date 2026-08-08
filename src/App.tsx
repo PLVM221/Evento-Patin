@@ -169,7 +169,8 @@ function OperatorApp({ userId }: { userId: string }) {
   const activeTeachers = active?.entryType !== 'general' ? state.teachers.filter((teacher) => teacher.club === active?.club) : []
   const waiting = stageSkaters.filter((skater) => skater.status === 'PENDING' || skater.status === 'POSTPONED')
   const next = waiting[0]
-  const finished = stageSkaters.filter((skater) => skater.status === 'FINISHED').length
+  const finishedEntries = stageSkaters.filter((skater) => skater.status === 'FINISHED')
+  const finished = finishedEntries.length
   const visible = useMemo(() => stageSkaters.filter((skater) => `${fullName(skater)} ${skater.club} ${skater.number}`.toLowerCase().includes(query.toLowerCase())), [stageSkaters, query])
   const suggestions = query.trim().length ? visible.slice(0, 6) : []
   const stageName = `${state.currentStage}.ª Parte de ${state.stageCount}`
@@ -185,7 +186,7 @@ function OperatorApp({ userId }: { userId: string }) {
   const missingSchedule = [!state.name.trim() && 'nombre', !state.eventDate && 'fecha', !state.startTime && 'hora', !state.location.trim() && 'lugar'].filter(Boolean) as string[]
   const qrReady = Boolean(qrLastPublishedAt) && !qrSyncError
   const checklist = [
-    { label: 'Audios', ok: preflight.complete, detail: preflight.complete ? `${preflight.ready} audios listos` : `Faltan ${preflight.total - preflight.ready} audios`, blocking: false },
+    ...(state.playAudio ? [{ label: 'Audios', ok: preflight.complete, detail: preflight.complete ? `${preflight.ready} audios listos` : `Faltan ${preflight.total - preflight.ready} audios`, blocking: false }] : []),
     { label: 'Partes', ok: emptyStages.length === 0, detail: emptyStages.length ? `Vacías: ${emptyStages.map(stage => `${stage}º Parte`).join(', ')}` : `${state.stageCount} partes con pasadas`, blocking: true },
     { label: 'Profes', ok: clubsWithoutTeacher.length === 0, detail: clubsWithoutTeacher.length ? `${clubsWithoutTeacher.length} clubes sin profe` : 'Todos los clubes asignados', blocking: false },
     { label: 'Evento', ok: missingSchedule.length === 0, detail: missingSchedule.length ? `Falta ${missingSchedule.join(', ')}` : `${state.eventDate} · ${state.startTime} hs`, blocking: true },
@@ -534,7 +535,7 @@ function OperatorApp({ userId }: { userId: string }) {
             </span>
             <em>45 s entre pasadas</em>
           </div>
-          <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>
+          {state.playAudio && <section className={`audio-preflight ${preflight.complete ? 'complete' : ''}`}><strong>CONTROL DE AUDIOS · {preflight.ready}/{preflight.total}</strong><span>{preflight.complete ? 'Todas las canciones pendientes están disponibles en este equipo.' : `Faltan ${preflight.total - preflight.ready} canciones. Revisalas en Administrar → Audios antes de comenzar.`}</span></section>}
           {state.showSkaters && <div className="search-wrap">
             <label className="search">
               <Search />
@@ -674,7 +675,7 @@ function OperatorApp({ userId }: { userId: string }) {
                   </div>
                 </div>
                 {active.entryType !== 'general' && <div className="active-teacher"><small>PROFE</small><strong>{activeTeachers.length ? activeTeachers.map((teacher) => teacher.name).join(' · ') : 'Pendiente de asignación'}</strong></div>}
-                <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} enhanced={audioEnhanced} onEnhanced={setAudioEnhanced} onVolume={(value) => setVolume('musicVolume', value)} />
+                {state.playAudio && <Player disabled={!state.started} skater={active} elapsed={state.elapsed} volume={state.musicVolume} enhanced={audioEnhanced} onEnhanced={setAudioEnhanced} onVolume={(value) => setVolume('musicVolume', value)} />}
                 <div className="critical-actions">
                   <button disabled={!state.started} className="finish" onClick={finalize}>
                     <Check /> FINALIZAR
@@ -720,6 +721,17 @@ function OperatorApp({ userId }: { userId: string }) {
                 {state.showSkaters && <span>{skater.number}</span>}
               </div>
             ))}
+            <div className="passed-title"><span>YA PASARON</span><em>{finishedEntries.length}</em></div>
+            <div className="passed-list">
+              {[...finishedEntries].reverse().map((skater, index) => (
+                <div className="passed-row" key={skater.id}>
+                  <b>{finishedEntries.length - index}</b>
+                  <div><strong>{entryPrimary(skater, state.showSkaters)}</strong><small>{entrySecondary(skater, state.showSkaters)}</small></div>
+                  <Check />
+                </div>
+              ))}
+              {finishedEntries.length === 0 && <small className="passed-empty">Todavía no terminó ninguna pasada.</small>}
+            </div>
           </aside>
         </div>
 

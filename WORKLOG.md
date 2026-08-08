@@ -4,6 +4,9 @@
 
 | Hora | Cambio |
 |------|--------|
+| 09:42 | feat(audio): evento permite desactivar reproducción y oculta reproductor, control previo y administración de canciones |
+| 09:42 | feat(operador): seguimiento lateral muestra pasadas finalizadas con la más reciente primero |
+| 09:42 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 02:18 | style(qr): listado de pasadas amplía filas, nombres, detalles y numeración en escritorio y celular |
 | 02:18 | test: `npm run lint`, `npm test`, `npm run build` y `git diff --check` OK |
 | 01:33 | fix(audio): cargas consecutivas confirman IndexedDB y conservan asociaciones aunque falle metadata o espacio local |

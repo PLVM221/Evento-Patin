@@ -14,6 +14,7 @@ export const initialFestival: FestivalState = {
   breakDurationMinutes: 20,
   stageCount: 2,
   showSkaters: true,
+  playAudio: true,
   useHeats: false,
   currentStage: 1,
   completedStages: [],

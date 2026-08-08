@@ -44,7 +44,7 @@ const optimizeFrame = (file: File, done: (value: string) => void) => {
 interface Props {
   state: FestivalState
   onClose: () => void
-  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount' | 'showSkaters' | 'useHeats'>) => void
+  onUpdateEvent: (values: Pick<FestivalState, 'name' | 'organizer' | 'organizerLogo' | 'publicFrame' | 'location' | 'eventDate' | 'startTime' | 'countdownMinutes' | 'breakDurationMinutes' | 'stageCount' | 'showSkaters' | 'playAudio' | 'useHeats'>) => void
   onAddSkater: (skater: Omit<Skater, 'id' | 'status'>) => void
   onImportSkaters: (skaters: Array<Omit<Skater, 'id' | 'status'>>) => void
   onImportEvent: (value: unknown) => void
@@ -97,7 +97,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           <button className={tab === 'sorteo' ? 'selected' : ''} onClick={() => setTab('sorteo')}><Trophy /> Sorteo</button>
           <button className={tab === 'copias' ? 'selected' : ''} onClick={() => setTab('copias')}><Save /> Copias</button>
           <button className={tab === 'offline' ? 'selected' : ''} onClick={() => setTab('offline')}><Save /> Sin conexión</button>
-          <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>
+          {state.playAudio && <button className={tab === 'audios' ? 'selected' : ''} onClick={() => setTab('audios')}><Headphones /> Audios</button>}
         </nav>
         <div className="admin-content">
           {tab === 'bufet' && <VisibilityToggle checked={state.showBuffet} title="Mostrar Bufet en la web del QR" onChange={visible => onSetPublicSectionVisibility('showBuffet', visible)} />}
@@ -115,7 +115,7 @@ export function AdminModal({ state, onClose, onUpdateEvent, onAddSkater, onImpor
           {tab === 'sorteo' && <RaffleAdmin state={state} onAddPrice={onAddRafflePrice} onRemovePrice={onRemoveRafflePrice} onAdd={onAddRafflePrize} onUpdate={onUpdateRafflePrize} onRemove={onRemoveRafflePrize} />}
           {tab === 'copias' && <BackupAdmin state={state} savedEvents={savedEvents} onSave={onSaveEvent} onRestore={onRestoreEvent} onDelete={onDeleteSavedEvent} onImport={onImportEvent} />}
           {tab === 'offline' && <OfflineAdmin enabled={offlineEnabled} onChange={onSetOfflineMode} />}
-          {tab === 'audios' && <AudioAdmin skaters={state.skaters} showSkaters={state.showSkaters} onUpdate={onUpdateSkater} />}
+          {state.playAudio && tab === 'audios' && <AudioAdmin skaters={state.skaters} showSkaters={state.showSkaters} onUpdate={onUpdateSkater} />}
         </div>
         <footer className={`admin-save-bar ${saveStatus}`}>
           <span>{saveStatus === 'saved' ? 'Cambios guardados en la nube.' : saveStatus === 'offline' ? 'Guardado en este equipo. Se sincronizará al volver Internet.' : saveStatus === 'error' ? 'No se pudo guardar. Revisá la conexión.' : 'El guardado automático está activo.'}</span>
@@ -131,7 +131,7 @@ function VisibilityToggle({ checked, title, onChange }: { checked: boolean; titl
 }
 
 function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave: Props['onUpdateEvent']; onClearAll: Props['onClearAll'] }) {
-  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount, showSkaters: state.showSkaters, useHeats: state.useHeats })
+  const [values, setValues] = useState({ name: state.name, organizer: state.organizer, organizerLogo: state.organizerLogo, publicFrame: state.publicFrame, location: state.location, eventDate: state.eventDate, startTime: state.startTime, countdownMinutes: state.countdownMinutes, breakDurationMinutes: state.breakDurationMinutes, stageCount: state.stageCount, showSkaters: state.showSkaters, playAudio: state.playAudio, useHeats: state.useHeats })
   const saveTimer = useRef<number | undefined>(undefined)
   const pendingValues = useRef<typeof values | undefined>(undefined)
   const onSaveRef = useRef(onSave)
@@ -164,6 +164,7 @@ function EventForm({ state, onSave, onClearAll }: { state: FestivalState; onSave
     <label>Ubicación<input required placeholder="Ciudad, provincia" value={values.location} onChange={event => commit({ location: event.target.value })} /></label>
     <div className="event-date-grid"><label>Día<input type="date" required value={values.eventDate} onChange={event => commit({ eventDate: event.target.value }, true)} /></label><label>Hora de inicio<input type="time" required value={values.startTime} onChange={event => commit({ startTime: event.target.value }, true)} /></label><label>Aviso previo (min)<input type="number" min="0" value={values.countdownMinutes} onChange={event => commit({ countdownMinutes: Number(event.target.value) })} /></label></div>
     <label className="public-visibility"><input type="checkbox" checked={values.showSkaters} onChange={event => commit({ showSkaters: event.target.checked })} /><span><strong>Mostrar patinadoras</strong><small>Desmarcado: desaparecen nombres, números, listados y controles de patinadoras en operador y QR. Los datos no se borran.</small></span></label>
+    <label className="public-visibility"><input type="checkbox" checked={values.playAudio} onChange={event => commit({ playAudio: event.target.checked })} /><span><strong>Reproducir música desde el sistema</strong><small>Desmarcado: se ocultan el reproductor, el control previo y la administración de audios. Las canciones cargadas no se borran.</small></span></label>
     <label>Cantidad de partes<select value={values.stageCount} onChange={event => commit({ stageCount: Number(event.target.value) as FestivalState['stageCount'] })}><option value="1">1 parte</option><option value="2">2 partes</option><option value="3">3 partes</option></select><small className="field-help">Se aplica a las pasadas y al historial del evento.</small></label>
     {values.showSkaters && <label className="public-visibility"><input type="checkbox" checked={values.useHeats} onChange={event => commit({ useHeats: event.target.checked })} /><span><strong>Usar tandas</strong><small>Desactivado: todas quedan en Tanda 1.</small></span></label>}
     <label>Duración de cada receso (minutos)<input type="number" min="1" required value={values.breakDurationMinutes} onChange={event => commit({ breakDurationMinutes: Number(event.target.value) })} /><small className="field-help">Se usa para calcular la cuenta regresiva y la hora de finalización.</small></label>
